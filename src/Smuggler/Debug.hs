@@ -7,23 +7,15 @@ module Smuggler.Debug
   )
 where
 
-import           Data.Proxy                     ( Proxy(..) )
-import           Data.Text                      ( Text )
-import           Data.Text.Lazy                 ( toStrict )
-import           Data.Typeable                  ( Typeable
-                                                , typeRep
-                                                )
-import           Fmt                            ( fmt
-                                                , padLeftF
-                                                )
-import           Text.Pretty.Simple             ( pShow )
-import qualified Data.Text                     as T
-                                                ( lines
-                                                , pack
-                                                , unlines
-                                                )
-import qualified Data.Text.IO                  as T
-                                                ( putStrLn )
+import Data.Proxy ( Proxy(..) )
+import Data.Text ( Text )
+import Data.Text.Lazy ( toStrict )
+import Data.Typeable ( Typeable, typeRep )
+import Fmt ( fmt, padLeftF )
+import Text.Pretty.Simple ( pShow )
+import qualified Data.Text as T ( lines, pack, unlines )
+import qualified Data.Text.IO as T ( putStrLn )
+
 
 
 -- | Helper function to debug different parts of AST processing.

@@ -1,6 +1,5 @@
 module Smuggler.Export (addExplicitExports, mkLIEVarFromNameT, addCommaT, addParensT) where
 
-
 import Avail ( AvailInfo, availNamesWithSelectors )
 import Control.Monad ( unless )
 import Data.Maybe ( isNothing )

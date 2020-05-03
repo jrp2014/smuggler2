@@ -11,8 +11,8 @@ import GHC.IO.Encoding ( setLocaleEncoding, utf8 )
 import HscTypes ( ModSummary(..) )
 import HsSyn ( ImportDecl(ideclImplicit) )
 import IOEnv ( readMutVar )
-import Language.Haskell.GHC.ExactPrint ( exactPrint  )
-import Language.Haskell.GHC.ExactPrint.Utils ( showAnnData )
+import Language.Haskell.GHC.ExactPrint ( exactPrint )
+import Language.Haskell.GHC.ExactPrint.Utils ()
 import Plugins
     ( CommandLineOption,
       Plugin(..),
@@ -26,8 +26,6 @@ import Smuggler.Parser ( runParser )
 import SrcLoc ( unLoc )
 import System.FilePath ( (-<.>) )
 import TcRnTypes ( TcGblEnv(..), TcM )
-
-
 
 plugin :: Plugin
 plugin = defaultPlugin { typeCheckResultAction = smugglerPlugin

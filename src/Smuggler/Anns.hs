@@ -5,39 +5,21 @@ module Smuggler.Anns
   )
 where
 
-import           Data.List                      ( find
-                                                , groupBy
-                                                )
-import qualified Data.Map.Strict               as Map
-                                                ( delete
-                                                , filterWithKey
-                                                , fromList
-                                                , insert
-                                                , lookup
-                                                , toList
-                                                )
-import qualified GHC                            ( AnnKeywordId(AnnComma) )
-import           Language.Haskell.GHC.ExactPrint
-                                                ( AnnKey(..)
-                                                , Annotation(..)
-                                                , Anns
-                                                , modifyAnnsT
-                                                , TransformT
-                                                )
-import           Language.Haskell.GHC.ExactPrint.Types
-                                                ( AnnConName(..)
-                                                , DeltaPos
-                                                , KeywordId(..)
-                                                , mkAnnKey
-                                                )
-import           SrcLoc                         ( Located
-                                                , SrcSpan(RealSrcSpan)
-                                                , srcSpanEndLine
-                                                , srcSpanStartCol
-                                                , srcSpanStartLine
-                                                )
-
-import           Data.Generics                 as SYB
+import Data.List ( find, groupBy )
+import qualified Data.Map.Strict as Map
+    ( filterWithKey, lookup, toList, fromList, insert )
+import qualified GHC ( AnnKeywordId(AnnComma) )
+import Language.Haskell.GHC.ExactPrint
+    ( AnnKey(..), Annotation(..), Anns, modifyAnnsT, TransformT )
+import Language.Haskell.GHC.ExactPrint.Types
+    ( AnnConName(..), DeltaPos, KeywordId(..), mkAnnKey )
+import SrcLoc
+    ( Located,
+      SrcSpan(RealSrcSpan),
+      srcSpanEndLine,
+      srcSpanStartCol,
+      srcSpanStartLine )
+import Data.Generics as SYB ( Data )
 
 removeAnnAtLoc :: Int -> Int -> Anns -> Anns
 removeAnnAtLoc line col = Map.filterWithKey (\k _ -> matchKey k)

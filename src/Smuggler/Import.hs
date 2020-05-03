@@ -1,44 +1,19 @@
 module Smuggler.Import where
 
-import           Avail
-import           BasicTypes
 import           Control.Monad                  ( unless )
-import           Data.List                      ( foldl' )
-import           Data.Maybe                     ( isNothing )
 import           DynFlags                       ( DynFlags )
-import           GHC                            ( AnnKeywordId(..)
+import           GHC                            ( ieName
                                                 , GhcPs
-                                                , HsModule
-                                                , hsmodImports
-                                                , ieName
+                                                , HsModule(hsmodImports)
                                                 )
-import           HsImpExp                       ( IE
-                                                  ( IEThingAbs
-                                                  , IEThingAll
-                                                  , IEThingWith
-                                                  , IEVar
-                                                  )
-                                                , IEWrappedName(IEName)
-                                                , ImportDecl
-                                                  ( ideclHiding
-                                                  , ideclName
-                                                  )
+import           HsImpExp                       ( ImportDecl
+                                                , ImportDecl(..)
                                                 , LIE
-                                                , LIEWrappedName
                                                 , LImportDecl
-                                                , ideclImplicit
-                                                , ieLWrappedName
-                                                , pprImpExp
                                                 )
 import           HsSyn                          ( GhcRn )
-import           Language.Haskell.GHC.ExactPrint.Print
-                                                ( exactPrint )
 import           Language.Haskell.GHC.ExactPrint.Transform
-                                                ( TransformT
-                                                , addSimpleAnnT
-                                                , logDataWithAnnsTr
-                                                , logTr
-                                                , removeTrailingCommaT
+                                                ( removeTrailingCommaT
                                                 , runTransform
                                                 , setEntryDPT
                                                 , uniqueSrcSpanT
@@ -46,43 +21,24 @@ import           Language.Haskell.GHC.ExactPrint.Transform
 import           Language.Haskell.GHC.ExactPrint.Types
                                                 ( Anns
                                                 , DeltaPos(DP)
-                                                , KeywordId(G)
-                                                , noExt
                                                 )
-import           Language.Haskell.GHC.ExactPrint.Utils
-                                                ( debug
-                                                , ss2posEnd
-                                                )
-import           LoadIface
-import           Name                           ( Name
-                                                , nameSrcSpan
-                                                )
-import           Outputable
-import           PrelNames                      ( pRELUDE_NAME )
 import           RdrName                        ( GlobalRdrElt(..) )
-import           RnNames                        ( ImportDeclUsage
-                                                , findImportUsage
-                                                , getMinimalImports
-                                                )
-import           Smuggler.Anns                  ( removeAnnAtLoc
-                                                , removeLocatedKeywordT
-                                                , removeTrailingCommas
+import           RnNames                        ( findImportUsage
+                                                , ImportDeclUsage
                                                 )
 import           Smuggler.Export                ( mkLIEVarFromNameT
                                                 , addCommaT
                                                 , addParensT
-                                                ) -- TODO:: take this out of Exports
-import           Smuggler.Options               ( ImportAction(..) )
-import           SrcLoc                         ( GenLocated(L)
-                                                , Located
-                                                , SrcSpan(..)
-                                                , srcSpanEndCol
-                                                , srcSpanEndLine
-                                                , srcSpanStartCol
-                                                , srcSpanStartLine
-                                                , unLoc
                                                 )
-import           TcRnTypes
+import           Smuggler.Options               ( ImportAction(..) )
+import           SrcLoc                         ( unLoc
+                                                , GenLocated(L)
+                                                , Located
+                                                , SrcSpan
+                                                  ( RealSrcSpan
+                                                  , UnhelpfulSpan
+                                                  )
+                                                )
 
 minimiseImports
   :: DynFlags
@@ -91,11 +47,13 @@ minimiseImports
   -> [GlobalRdrElt]
   -> (Anns, Located (HsModule GhcPs))
   -> (Anns, Located (HsModule GhcPs))
-minimiseImports dflags action user_imports uses p@(anns, ast@(L astLoc hsMod))
-  = case action of
+minimiseImports dflags action user_imports uses p@(anns, L astLoc hsMod) =
+  case action of
     NoImportProcessing -> p
     _                  -> (anns', L astLoc hsMod')
 --      trace ("usage\n" ++ showSDoc dflags (ppr usage)) (anns', L astLoc hsMod')
+
+
 
 
  where
@@ -132,8 +90,10 @@ usedImport
   -> LImportDecl GhcPs
   -> ImportDeclUsage
   -> (Anns, [LImportDecl GhcPs])
-usedImport _ _ anns impPs (L (UnhelpfulSpan _) _, _, _) = (anns, [])
-usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (RealSrcSpan locRn) declRn), used, unused)
+usedImport _ _ anns impPs (L (UnhelpfulSpan _) _, _, _) = (anns, [impPs])
+usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (L (RealSrcSpan _) declRn, used, unused)
+  | null unused
+  = (anns, [impPs])
   | -- Do not remove `import M ()`
     Just (False, L _ []) <- ideclHiding declRn
   = (anns, [impPs])
@@ -149,17 +109,16 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
     PreserveInstanceImports -> case ideclHiding declRn of
       Nothing -> -- add (), to import instances only
         let (ast', (anns', _n), _s) = runTransform anns $ do
-              locHiding <- uniqueSrcSpanT
-              let lies = L locHiding [] :: Located [LIE GhcPs]
-              addParensT lies
-              let declPs' = declPs { ideclHiding = Just (False, lies) }
+              lIEloc <- uniqueSrcSpanT
+              let lIEs = L lIEloc [] :: Located [LIE GhcPs]
+              addParensT lIEs
+              let declPs' = declPs { ideclHiding = Just (False, lIEs) }
               let impPs'  = L (RealSrcSpan locPs) declPs'
               return [impPs']
         in  (anns', ast')
-      Just (False, L lieLoc _) -> -- just leave the ()
+      Just (False, L lIEloc _) -> -- just leave the ()
         let (ast', (anns', _n), _s) = runTransform anns $ do
-              lieLoc' <- uniqueSrcSpanT
-              let noLIEs = L lieLoc' [] :: Located [LIE GhcPs]
+              let noLIEs = L lIEloc [] :: Located [LIE GhcPs]
               addParensT noLIEs
               let declPs' = declPs { ideclHiding = Just (False, noLIEs) }
               let impPs'  = L (RealSrcSpan locPs) declPs'
@@ -180,16 +139,16 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
             importList <- mapM mkLIEVarFromNameT names
             unless (null importList) $ mapM_ addCommaT (init importList)
             let lImportList = L (RealSrcSpan locPs) importList -- locPS or unique?
-                declPs'     = declPs { ideclHiding = Just (False, lImportList) }
+                declPs'     = declPs { ideclHiding = Just (False, lImportList) }  -- assumes declPs is not an XImportDecl
             addParensT lImportList
             let impPs' = L (RealSrcSpan locPs) declPs'
             return [impPs']
         in  (anns', ast')
 
-      Just (False, L _ liesRn) ->
+      Just (False, L locLIE lIEsRn) ->
         let
-          Just (False, L locLIE liesPs) = ideclHiding declPs
-          (usedImportsPs, anns')        = usedLImportDeclsPs anns liesPs liesRn
+          Just (False, L _ lIEsPs) = ideclHiding declPs
+          (usedImportsPs, anns')   = usedLImportDeclsPs lIEsPs lIEsRn
           declPs' =
             declPs { ideclHiding = Just (False, L locLIE usedImportsPs) }
           impPs' = L (RealSrcSpan locPs) declPs'
@@ -201,29 +160,28 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
 
   -- TODO:: turn into a fold, or use monoid to make less ugly
 
-  usedLImportDeclsPs
-    :: Anns -> [LIE GhcPs] -> [LIE GhcRn] -> ([LIE GhcPs], Anns)
-  usedLImportDeclsPs anns liesPs liesRn = removeTrailingComma
-    (concat liesPs', anns')
+  usedLImportDeclsPs :: [LIE GhcPs] -> [LIE GhcRn] -> ([LIE GhcPs], Anns)
+  usedLImportDeclsPs lIEsPs lIEsRn = removeTrailingComma
+    (concat lIEsPs', anns')
    where
-    (liesPs', anns') = usedLImportDeclsPss anns liesPs liesRn
+    (lIEsPs', anns') = usedLImportDeclsPss anns lIEsPs lIEsRn
 
     removeTrailingComma :: ([LIE GhcPs], Anns) -> ([LIE GhcPs], Anns)
     removeTrailingComma ([]  , anns) = ([], anns)
-    removeTrailingComma (lies, anns) = (lies', anns')
+    removeTrailingComma (lIEs, anns) = (lIEs', anns')
      where
-      (lies', (anns', _), _) = runTransform anns $ do
-        removeTrailingCommaT (last lies)
-        setEntryDPT (head lies) (DP (0, 0))
-        return lies
+      (lIEs', (anns', _), _) = runTransform anns $ do
+        removeTrailingCommaT (last lIEs)
+        setEntryDPT (head lIEs) (DP (0, 0))
+        return lIEs
 
     usedLImportDeclsPss
       :: Anns -> [LIE GhcPs] -> [LIE GhcRn] -> ([[LIE GhcPs]], Anns)
-    usedLImportDeclsPss anns [] [] = ([[]], anns)
-    usedLImportDeclsPss anns (liePs : liesPs) (lieRn : liesRn) =
-      let (liesPs', anns' ) = usedLImportDeclsPss anns liesPs liesRn
+    usedLImportDeclsPss anns [] [] = ([], anns)
+    usedLImportDeclsPss anns (liePs : lIEsPs) (lieRn : lIEsRn) =
+      let (lIEsPs', anns' ) = usedLImportDeclsPss anns lIEsPs lIEsRn
           (liePs' , anns'') = usedLImportDeclPs anns' liePs lieRn
-      in  (liePs' : liesPs', anns'')
+      in  (liePs' : lIEsPs', anns'')
 
 
     usedLImportDeclPs :: Anns -> LIE GhcPs -> LIE GhcRn -> ([LIE GhcPs], Anns)
@@ -231,7 +189,7 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
       if ieName (unLoc lieRn) `elem` map gre_name used -- TODO: factor this out
         then
 --      let (ast', (anns', _), s) = runTransform anns $ do
---            -- Superfluous
+--            -- Superfluous?
 --            removeTrailingCommaT liePs
 --            removeLocatedKeywordT (G GHC.AnnVal) liePs
 --            return []
