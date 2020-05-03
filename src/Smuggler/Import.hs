@@ -68,7 +68,7 @@ import           Smuggler.Anns                  ( removeAnnAtLoc
                                                 , removeLocatedKeywordT
                                                 , removeTrailingCommas
                                                 )
-import           Smuggler.Export                ( mkIEVarFromNameT
+import           Smuggler.Export                ( mkLIEVarFromNameT
                                                 , addCommaT
                                                 , addParensT
                                                 ) -- TODO:: take this out of Exports
@@ -94,8 +94,10 @@ minimiseImports
 minimiseImports dflags action user_imports uses p@(anns, ast@(L astLoc hsMod))
   = case action of
     NoImportProcessing -> p
-    _ ->
-      trace ("usage\n" ++ showSDoc dflags (ppr usage)) (anns', L astLoc hsMod')
+    _                  -> (anns', L astLoc hsMod')
+--      trace ("usage\n" ++ showSDoc dflags (ppr usage)) (anns', L astLoc hsMod')
+
+
  where
 
   imports :: [LImportDecl GhcPs]
@@ -149,21 +151,16 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
         let (ast', (anns', _n), _s) = runTransform anns $ do
               locHiding <- uniqueSrcSpanT
               let lies = L locHiding [] :: Located [LIE GhcPs]
-              addSimpleAnnT
-                lies
-                (DP (0, 0))
-                [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
+              addParensT lies
               let declPs' = declPs { ideclHiding = Just (False, lies) }
               let impPs'  = L (RealSrcSpan locPs) declPs'
               return [impPs']
         in  (anns', ast')
       Just (False, L lieLoc _) -> -- just leave the ()
-        let (ast', (anns', _n), _s) = runTransform anns $ do -- do we really need to add ()?
-              let noLIEs = L lieLoc [] :: Located [LIE GhcPs]
-              addSimpleAnnT
-                noLIEs
-                (DP (0, 0))
-                [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
+        let (ast', (anns', _n), _s) = runTransform anns $ do
+              lieLoc' <- uniqueSrcSpanT
+              let noLIEs = L lieLoc' [] :: Located [LIE GhcPs]
+              addParensT noLIEs
               let declPs' = declPs { ideclHiding = Just (False, noLIEs) }
               let impPs'  = L (RealSrcSpan locPs) declPs'
               return [impPs']
@@ -177,14 +174,16 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
     NoImportProcessing -> (anns, [impPs])
     _                  -> case ideclHiding declRn of
       Nothing ->
-        let (ast', (anns', _n), _s) = runTransform anns $ do
-              let names = map gre_name used
-              importList <- mapM mkIEVarFromNameT names
-              unless (null importList) $ mapM_ addCommaT (init importList)
-              let lImportList = L (RealSrcSpan locPs) importList -- locPS or unique?
-                  declPs' = declPs { ideclHiding = Just (False, lImportList) }
-              addParensT lImportList
-              return [L (RealSrcSpan locPs) declPs']
+        let
+          (ast', (anns', _n), _s) = runTransform anns $ do
+            let names = map gre_name used
+            importList <- mapM mkLIEVarFromNameT names
+            unless (null importList) $ mapM_ addCommaT (init importList)
+            let lImportList = L (RealSrcSpan locPs) importList -- locPS or unique?
+                declPs'     = declPs { ideclHiding = Just (False, lImportList) }
+            addParensT lImportList
+            let impPs' = L (RealSrcSpan locPs) declPs'
+            return [impPs']
         in  (anns', ast')
 
       Just (False, L _ liesRn) ->
@@ -196,10 +195,8 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
           impPs' = L (RealSrcSpan locPs) declPs'
         in
           (anns', [impPs'])
-      -- TODO:: unised hidings. Leave as a noop for now
+      -- TODO:: unused hidings. Leave as a noop for now
       Just (True, _) -> (anns, [impPs])
-  | otherwise
-  = (anns, [impPs])
  where
 
   -- TODO:: turn into a fold, or use monoid to make less ugly

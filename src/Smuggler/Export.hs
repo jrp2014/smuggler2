@@ -1,4 +1,4 @@
-module Smuggler.Export (addExplicitExports, mkIEVarFromNameT, addCommaT, addParensT) where
+module Smuggler.Export (addExplicitExports, mkLIEVarFromNameT, addCommaT, addParensT) where
 
 
 import Avail ( AvailInfo, availNamesWithSelectors )
@@ -45,13 +45,13 @@ addExplicitExports dflags action exports p@(anns, L astLoc hsMod) =
 
     let names = mkNamesFromAvailInfos exports
 
-    exportsList <- mapM mkIEVarFromNameT names
+    exportsList <- mapM mkLIEVarFromNameT names
     mapM_ addExportDeclAnnT exportsList
     unless (null exportsList) $ mapM_ addCommaT (init exportsList)
 
     let lExportsList = L astLoc exportsList
         hsMod'       = hsMod { hsmodExports = Just lExportsList }
-    addParensT lExportsList
+    unless (null exportsList) $ addParensT lExportsList
 
     return (L astLoc hsMod')
 
@@ -61,8 +61,8 @@ mkNamesFromAvailInfos = concatMap availNamesWithSelectors
 --Produces all  names made available by the availability information (including overloaded selectors)
 --To exclude overloaded selector use availNames
 
-mkIEVarFromNameT :: Monad m => Name -> TransformT m (Located (IE GhcPs))
-mkIEVarFromNameT name = do
+mkLIEVarFromNameT :: Monad m => Name -> TransformT m (Located (IE GhcPs))
+mkLIEVarFromNameT name = do
   -- Could use only one loc as it would be used on different constructors
   -- and not, therefore, get overwritten on subsequent uses.
   locIEVar  <- uniqueSrcSpanT
