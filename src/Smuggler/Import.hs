@@ -2,7 +2,7 @@ module Smuggler.Import where
 
 import           Avail
 import           BasicTypes
-import           Control.Monad                  ( guard )
+import           Control.Monad                  ( unless )
 import           Data.List                      ( foldl' )
 import           Data.Maybe                     ( isNothing )
 import           DynFlags                       ( DynFlags )
@@ -59,7 +59,7 @@ import           Name                           ( Name
                                                 )
 import           Outputable
 import           PrelNames                      ( pRELUDE_NAME )
-import           RdrName                        ( GlobalRdrElt )
+import           RdrName                        ( GlobalRdrElt(..) )
 import           RnNames                        ( ImportDeclUsage
                                                 , findImportUsage
                                                 , getMinimalImports
@@ -68,6 +68,10 @@ import           Smuggler.Anns                  ( removeAnnAtLoc
                                                 , removeLocatedKeywordT
                                                 , removeTrailingCommas
                                                 )
+import           Smuggler.Export                ( mkIEVarFromNameT
+                                                , addCommaT
+                                                , addParensT
+                                                ) -- TODO:: take this out of Exports
 import           Smuggler.Options               ( ImportAction(..) )
 import           SrcLoc                         ( GenLocated(L)
                                                 , Located
@@ -90,7 +94,8 @@ minimiseImports
 minimiseImports dflags action user_imports uses p@(anns, ast@(L astLoc hsMod))
   = case action of
     NoImportProcessing -> p
-    _                  -> (anns', L astLoc hsMod')
+    _ ->
+      trace ("usage\n" ++ showSDoc dflags (ppr usage)) (anns', L astLoc hsMod')
  where
 
   imports :: [LImportDecl GhcPs]
@@ -100,18 +105,9 @@ minimiseImports dflags action user_imports uses p@(anns, ast@(L astLoc hsMod))
   usage :: [ImportDeclUsage]
   usage             = findImportUsage user_imports uses
 
-
   (anns', imports') = findUsedImports anns imports usage
   hsMod'            = hsMod { hsmodImports = imports' }
 
-  {-
-  (ast', (anns', _n), _s) = runTransform anns $ do
-
-      let imports' = undefined
-
-      let hsMod' = hsMod { hsmodImports = imports' }
-
--}
   findUsedImports
     :: Anns
     -> [LImportDecl GhcPs]
@@ -147,44 +143,62 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
   = (anns, [impPs])
   | -- Nothing used
     null used
-  = case ideclHiding declRn of -- TODO:: the following cover only the PreserveInstanceImports case
-    Nothing -> -- add (), to import only instances
-      let (ast', (anns', _n), _s) = runTransform anns $ do
-            locHiding <- uniqueSrcSpanT
-            let lies = L locHiding [] :: Located [LIE GhcPs]
-            addSimpleAnnT lies
-                          (DP (0, 0))
-                          [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
-            let declPs' = declPs { ideclHiding = Just (False, lies) }
-            let impPs'  = L (RealSrcSpan locPs) declPs'
-            return [impPs']
-      in  (anns', ast')
-    Just (False, L lieLoc _) -> -- just leave the ()
-      let (ast', (anns', _n), _s) = runTransform anns $ do
-            let noLIEs = L lieLoc [] :: Located [LIE GhcPs]
-            addSimpleAnnT noLIEs
-                          (DP (0, 0))
-                          [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
-            let declPs' = declPs { ideclHiding = Just (False, noLIEs) }
-            let impPs'  = L (RealSrcSpan locPs) declPs'
-            return [impPs']
-      in  (anns', ast')
-    -- TODO:: hiding unuseds
-    Just (True, _) -> (anns, [impPs])
-  | -- Everything imported is used; drop nothing
-    null unused
-  = (anns, [impPs])
-  | -- only part of non-hiding import is used
-    Just (False, L _ liesRn) <- ideclHiding declRn
-  = let
-      Just (False, L locLIE liesPs) = ideclHiding declPs
-      (usedImportsPs, anns')        = usedLImportDeclsPs anns liesPs liesRn
-      declPs' = declPs { ideclHiding = Just (False, L locLIE usedImportsPs) }
-      impPs'                        = L (RealSrcSpan locPs) declPs'
-    in
-      (anns', [impPs'])
-  | -- TODO: unused hidings
-    otherwise
+  = case action of
+    PreserveInstanceImports -> case ideclHiding declRn of
+      Nothing -> -- add (), to import instances only
+        let (ast', (anns', _n), _s) = runTransform anns $ do
+              locHiding <- uniqueSrcSpanT
+              let lies = L locHiding [] :: Located [LIE GhcPs]
+              addSimpleAnnT
+                lies
+                (DP (0, 0))
+                [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
+              let declPs' = declPs { ideclHiding = Just (False, lies) }
+              let impPs'  = L (RealSrcSpan locPs) declPs'
+              return [impPs']
+        in  (anns', ast')
+      Just (False, L lieLoc _) -> -- just leave the ()
+        let (ast', (anns', _n), _s) = runTransform anns $ do -- do we really need to add ()?
+              let noLIEs = L lieLoc [] :: Located [LIE GhcPs]
+              addSimpleAnnT
+                noLIEs
+                (DP (0, 0))
+                [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
+              let declPs' = declPs { ideclHiding = Just (False, noLIEs) }
+              let impPs'  = L (RealSrcSpan locPs) declPs'
+              return [impPs']
+        in  (anns', ast')
+      -- TODO:: unised hidings. Leave as a noop for now
+      Just (True, _) -> (anns, [impPs])
+    MinimiseImports    -> (anns, [])  -- Drop the import
+    NoImportProcessing -> (anns, [impPs])
+  | not (null used)
+  = case action of
+    NoImportProcessing -> (anns, [impPs])
+    _                  -> case ideclHiding declRn of
+      Nothing ->
+        let (ast', (anns', _n), _s) = runTransform anns $ do
+              let names = map gre_name used
+              importList <- mapM mkIEVarFromNameT names
+              unless (null importList) $ mapM_ addCommaT (init importList)
+              let lImportList = L (RealSrcSpan locPs) importList -- locPS or unique?
+                  declPs' = declPs { ideclHiding = Just (False, lImportList) }
+              addParensT lImportList
+              return [L (RealSrcSpan locPs) declPs']
+        in  (anns', ast')
+
+      Just (False, L _ liesRn) ->
+        let
+          Just (False, L locLIE liesPs) = ideclHiding declPs
+          (usedImportsPs, anns')        = usedLImportDeclsPs anns liesPs liesRn
+          declPs' =
+            declPs { ideclHiding = Just (False, L locLIE usedImportsPs) }
+          impPs' = L (RealSrcSpan locPs) declPs'
+        in
+          (anns', [impPs'])
+      -- TODO:: unised hidings. Leave as a noop for now
+      Just (True, _) -> (anns, [impPs])
+  | otherwise
   = (anns, [impPs])
  where
 
@@ -206,7 +220,6 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
         setEntryDPT (head lies) (DP (0, 0))
         return lies
 
-    -- TODO:: the point is to remove the trailing comma at this level
     usedLImportDeclsPss
       :: Anns -> [LIE GhcPs] -> [LIE GhcRn] -> ([[LIE GhcPs]], Anns)
     usedLImportDeclsPss anns [] [] = ([[]], anns)
@@ -217,14 +230,15 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (impRn@(L (
 
 
     usedLImportDeclPs :: Anns -> LIE GhcPs -> LIE GhcRn -> ([LIE GhcPs], Anns)
-    usedLImportDeclPs anns liePs lieRn = if ieName (unLoc lieRn) `elem` unused
-      then
-  --      let (ast', (anns', _), s) = runTransform anns $ do
-  --            -- Superfluous
-  --            removeTrailingCommaT liePs
-  --            removeLocatedKeywordT (G GHC.AnnVal) liePs
-  --            return []
-  --      in   ([], anns')
-           ([], anns)
-      else ([liePs], anns)
+    usedLImportDeclPs anns liePs lieRn =
+      if ieName (unLoc lieRn) `elem` map gre_name used -- TODO: factor this out
+        then
+--      let (ast', (anns', _), s) = runTransform anns $ do
+--            -- Superfluous
+--            removeTrailingCommaT liePs
+--            removeLocatedKeywordT (G GHC.AnnVal) liePs
+--            return []
+--      in   ([], anns')
+             ([liePs], anns)
+        else ([], anns)
 

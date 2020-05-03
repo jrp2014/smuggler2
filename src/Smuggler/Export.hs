@@ -1,4 +1,4 @@
-module Smuggler.Export (addExplicitExports) where
+module Smuggler.Export (addExplicitExports, mkIEVarFromNameT, addCommaT, addParensT) where
 
 
 import Avail ( AvailInfo, availNamesWithSelectors )

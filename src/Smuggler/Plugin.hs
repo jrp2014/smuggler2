@@ -77,10 +77,9 @@ smugglerPlugin clis modSummary tcEnv = do
         let (anns'', ast'') =
                 addExplicitExports dflags (exportAction options) allExports (anns', ast')
 
---        putStrLn $ "showAnnData\n" ++ showAnnData anns' 2 ast'
+--        putStrLn $ "showAnnData\n" ++ showAnnData anns'' 2 ast''
 
         -- 4. Output the result
---        putStrLn $ exactPrint ast' anns'
         let newContent = exactPrint ast'' anns''
         case newExtension options of
           Nothing  -> writeFile modulePath newContent
