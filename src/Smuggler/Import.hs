@@ -53,9 +53,6 @@ minimiseImports dflags action user_imports uses p@(anns, L astLoc hsMod) =
     _                  -> (anns', L astLoc hsMod')
 --      trace ("usage\n" ++ showSDoc dflags (ppr usage)) (anns', L astLoc hsMod')
 
-
-
-
  where
 
   imports :: [LImportDecl GhcPs]
@@ -92,8 +89,10 @@ usedImport
   -> (Anns, [LImportDecl GhcPs])
 usedImport _ _ anns impPs (L (UnhelpfulSpan _) _, _, _) = (anns, [impPs])
 usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (L (RealSrcSpan _) declRn, used, unused)
-  | null unused
-  = (anns, [impPs])
+
+-- unused applies to an explicit import list.  It will be null for a simple module
+-- import
+
   | -- Do not remove `import M ()`
     Just (False, L _ []) <- ideclHiding declRn
   = (anns, [impPs])
@@ -126,7 +125,7 @@ usedImport dynflags action anns impPs@(L (RealSrcSpan locPs) declPs) (L (RealSrc
         in  (anns', ast')
       -- TODO:: unised hidings. Leave as a noop for now
       Just (True, _) -> (anns, [impPs])
-    MinimiseImports    -> (anns, [])  -- Drop the import
+    MinimiseImports    -> (anns, [])  -- Drop the import completely
     NoImportProcessing -> (anns, [impPs])
   | not (null used)
   = case action of
