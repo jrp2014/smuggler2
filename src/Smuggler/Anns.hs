@@ -26,7 +26,7 @@ where
 import Data.Function (on)
 import Data.Generics as SYB (Data)
 import Data.List (find, groupBy)
-import qualified Data.Map.Strict as Map (alter, filterWithKey, findWithDefault, fromList, insert,
+import qualified Data.Map.Strict as Map (empty, alter, filterWithKey, findWithDefault, fromList, insert,
                                          lookup, toList, union)
 import Data.Maybe (fromMaybe)
 import qualified GHC (AnnKeywordId (..))
@@ -34,6 +34,7 @@ import Language.Haskell.GHC.ExactPrint (AnnKey (..), Annotation (..), Anns, Tran
                                         uniqueSrcSpanT, getAnnsT)
 import Language.Haskell.GHC.ExactPrint.Types (AnnConName (..), DeltaPos (..), KeywordId (..),
                                               annNone, mkAnnKey)
+import Language.Haskell.GHC.ExactPrint.Transform (runTransform, graftT)
 import Language.Haskell.GHC.ExactPrint.Utils (annLeadingCommentEntryDelta)
 import SrcLoc (GenLocated (..), Located, SrcSpan (RealSrcSpan), srcSpanEndLine, srcSpanStartCol,
                srcSpanStartLine)
@@ -147,6 +148,13 @@ addAllAnns a b anns =
     , annsDP               = ((++) `on` annsDP) ann ann'
     }
 
+trimT :: Data ast => Anns -> ast -> (Anns, ast)
+trimT anns ast = (anns', ast')
+  where
+    (ast', (anns', _), _) = runTransform Map.empty $ graftT anns ast
+
+
+      
 isComma :: KeywordId -> Bool
 isComma (G GHC.AnnComma) = True
 isComma _                = False

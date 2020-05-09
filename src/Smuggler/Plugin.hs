@@ -5,17 +5,20 @@ module Smuggler.Plugin
   )
 where
 
+import Control.Monad(unless)
 import Control.Monad.IO.Class (liftIO)
 import Data.List ()
 import DynFlags (DynFlags, HasDynFlags (getDynFlags))
 import ErrUtils
-import GHC (Module, dumpDir, moduleName, moduleNameString)
+import GHC (Module, dumpDir, hsmodImports, moduleName, moduleNameString)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import HsSyn (ImportDecl (ideclImplicit))
 import HscTypes (ModSummary (..))
 import IOEnv (readMutVar)
-import Language.Haskell.GHC.ExactPrint (exactPrint)
+import Language.Haskell.GHC.ExactPrint (setEntryDPT, transferEntryDPT, uniqueSrcSpanT, exactPrint, mergeAnns)
+import Language.Haskell.GHC.ExactPrint.Transform (graftT, runTransform)
 import Language.Haskell.GHC.ExactPrint.Utils (showAnnData)
+import Language.Haskell.GHC.ExactPrint.Types (DeltaPos(..))
 import Outputable
 import Plugins
   ( CommandLineOption,
@@ -29,10 +32,9 @@ import Smuggler.Export (addExplicitExports)
 import Smuggler.Import (minimiseImports)
 import Smuggler.Options (Options (..), parseCommandLineOptions)
 import Smuggler.Parser (runImportsParser, runParser)
-import SrcLoc (unLoc)
-import System.FilePath ((</>))
-import System.FilePath ((-<.>))
-import System.IO (IOMode (..), openFile)
+import SrcLoc (GenLocated (..), unLoc)
+import System.FilePath ( (</>), (-<.>) )
+import System.IO (IOMode (..), withFile)
 import TcRnTypes (RnM, TcGblEnv (..), TcM)
 
 plugin :: Plugin
@@ -56,34 +58,12 @@ smugglerPlugin clis modSummary tcEnv = do
   uses <- readMutVar $ tcg_used_gres tcEnv
   let imports = tcg_rn_imports tcEnv
   let usage = findImportUsage imports uses
-  printMinimalImports' dflags (ms_mod modSummary) usage -- only need to do this if the dumpminimalimports flag is not set?
-  tcEnv <$ liftIO (smuggling dflags uses)
+  let minImpFilePath = mkFilePath dflags (ms_mod modSummary)
+  printMinimalImports' dflags minImpFilePath usage -- only need to do this if the dumpminimalimports flag is not set?
+  tcEnv <$ liftIO (smuggling dflags minImpFilePath uses)
   where
-    -- This version ignores implcit imports as the result cannot be parsed
-    -- back in.  (It has an '(implicit)')
-    printMinimalImports' :: DynFlags -> Module -> [ImportDeclUsage] -> RnM ()
-    printMinimalImports' dflags this_mod imports_w_usage =
-      do
-        imports' <- getMinimalImports imports_w_usage
-        liftIO $
-          do
-            h <- openFile (mkFilename dflags this_mod) WriteMode
-            printForUser dflags h neverQualify (vcat (map ppr (filter (not . ideclImplicit . unLoc) imports')))
-        -- The neverQualify is important.  We are printing Names
-        -- but they are in the context of an 'import' decl, and
-        -- we never qualify things inside there
-        -- E.g.   import Blag( f, b )
-        -- not    import Blag( Blag.f, Blag.g )!
-
-    mkFilename :: DynFlags -> Module -> FilePath
-    mkFilename dflags this_mod
-      | Just d <- dumpDir dflags = d </> basefn
-      | otherwise = basefn
-      where
-        basefn = moduleNameString (moduleName this_mod) ++ ".imports"
-
-    smuggling :: DynFlags -> [GlobalRdrElt] -> IO ()
-    smuggling dflags uses = do
+    smuggling :: DynFlags -> FilePath -> [GlobalRdrElt] -> IO ()
+    smuggling dflags minImpFilePath usage = do
       let options = parseCommandLineOptions clis
 
       -- 0. Read file content as a UTF-8 string (GHC accepts only ASCII or UTF-8)
@@ -91,20 +71,19 @@ smugglerPlugin clis modSummary tcEnv = do
       setLocaleEncoding utf8
 
       let modulePath = ms_hspp_file modSummary
-      fileContents <- readFile modulePath
+      modFileContents <- readFile modulePath
       -- parse the whole module
-      runParser modulePath fileContents >>= \case
+      runParser modulePath modFileContents >>= \case
         Left () -> error "failed to parsei module" -- pure () -- do nothing if file is invalid Haskell
-        Right (anns, ast) -> do
-          let minimalImportsFilename = mkFilename dflags (ms_mod modSummary)
-          fileContents <- readFile minimalImportsFilename
+        Right (anns, astMod@(L astModLoc hsMod)) -> do
+          minImpFileContents <- readFile minImpFilePath
 
           -- parse the minimal imports file
-          runParser minimalImportsFilename fileContents >>= \case
+          runParser minImpFilePath minImpFileContents >>= \case
             Left () -> do
               error "failed to parse minimal imports"
-            Right (anns', ast') -> do
-              liftIO $ putStrLn $ "showAnnData\n" ++ showAnnData anns' 2 ast'
+            Right (anns', astImpMod@(L astImpModLoc hsImpMod)) -> do
+              --liftIO $ putStrLn $ "showAnnData\n" ++ showAnnData anns' 2 ast'
 
               --          let allExports = tcg_exports tcEnv
               --          let (anns'', ast'') =
@@ -112,10 +91,41 @@ smugglerPlugin clis modSummary tcEnv = do
 
               --        putStrLn $ "showAnnData\n" ++ showAnnData anns'' 2 ast''
 
-              -- 4. Output the result
-              let options = parseCommandLineOptions clis
-              let modulePath = ms_hspp_file modSummary
-              let newContent = exactPrint ast anns'
+              let (astMod', (anns'', _), s) = runTransform anns $ do
+                    minImports <- graftT anns' (hsmodImports hsImpMod)
+                    unless (null minImports) $ setEntryDPT (head minImports) (DP (2, 0))
+                    return $ L astModLoc (hsMod {hsmodImports = minImports})
+
+              liftIO $ putStrLn $ "showAnnData\n" ++ showAnnData anns'' 2 astMod'
+
+              let newContent = exactPrint astMod' anns''
               case newExtension options of
                 Nothing -> writeFile modulePath newContent
                 Just ext -> writeFile (modulePath -<.> ext) newContent
+
+    -- This version ignores implcit imports as the result cannot be parsed
+    -- back in.  (It has an '(implicit)')
+    printMinimalImports' :: DynFlags -> FilePath -> [ImportDeclUsage] -> RnM ()
+    printMinimalImports' dflags filename imports_w_usage =
+      do
+        imports' <- getMinimalImports imports_w_usage
+        liftIO $
+          withFile
+            filename
+            WriteMode
+            ( \h ->
+                printForUser dflags h neverQualify (vcat (map ppr (filter (not . ideclImplicit . unLoc) imports')))
+            )
+
+    -- The neverQualify is important.  We are printing Names
+    -- but they are in the context of an 'import' decl, and
+    -- we never qualify things inside there
+    -- E.g.   import Blag( f, b )
+    -- not    import Blag( Blag.f, Blag.g )!
+
+    mkFilePath :: DynFlags -> Module -> FilePath
+    mkFilePath dflags this_mod
+      | Just d <- dumpDir dflags = d </> basefn
+      | otherwise = basefn
+      where
+        basefn = moduleNameString (moduleName this_mod) ++ ".imports"

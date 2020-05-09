@@ -5,6 +5,8 @@ import           DynFlags                       ( DynFlags )
 import           GHC                            ( ieName
                                                 , GhcPs
                                                 , HsModule(hsmodImports)
+                                                , ModuleName
+                                                , hsmodName
                                                 )
 import           HsImpExp                       ( ImportDecl
                                                 , ImportDecl(..)
@@ -15,8 +17,10 @@ import           HsSyn                          ( GhcRn )
 import           Language.Haskell.GHC.ExactPrint.Transform
                                                 ( removeTrailingCommaT
                                                 , runTransform
+                                                , TransformT
                                                 , setEntryDPT
                                                 , uniqueSrcSpanT
+                                                , graftT
                                                 )
 import           Language.Haskell.GHC.ExactPrint.Types
                                                 ( Anns
@@ -39,6 +43,65 @@ import           SrcLoc                         ( unLoc
                                                   , UnhelpfulSpan
                                                   )
                                                 )
+
+import Data.Function (on)
+import Data.Functor.Identity
+import Data.List (nubBy)
+
+
+
+
+--https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs
+{-
+
+type AnnotatedImports = (Anns, LImportDecl GhcPs)
+
+insertImports
+  :: Monad m
+  => Anns
+  -> [LImportDecl GhcPs]   -- ^ imports and their annotations
+  -> Located (HsModule GhcPs)    -- ^ target module
+  -> TransformT m (Located (HsModule GhcPs))
+insertImports anns is (L l m) = do
+  imps <- graftT anns is
+  let
+    deduped = nubBy (eqImportDecl `on` unLoc) $ hsmodImports m ++ imps
+  return $ L l m { hsmodImports = deduped }
+
+--filterAndFlatten :: Maybe ModuleName -> [AnnotatedImports] -> AnnotatedImports
+filterAndFlatten mbName anns is =
+  runTransform anns  $ return . externalImps mbName
+  where
+    externalImps :: Maybe ModuleName -> [LImportDecl GhcPs] -> [LImportDecl GhcPs]
+    externalImps (Just mn) = filter ((/= mn) . unLoc . ideclName . unLoc)
+    externalImps _ = id
+
+-}
+
+eqImportDecl :: ImportDecl GhcPs -> ImportDecl GhcPs -> Bool
+eqImportDecl x y =
+  ((==) `on` unLoc . ideclName) x y
+  && ((==) `on` ideclQualified) x y
+  && ((==) `on` ideclAs) x y
+  && ((==) `on` ideclHiding) x y
+  && ((==) `on` ideclPkgQual) x y
+  && ((==) `on` ideclSource) x y
+  && ((==) `on` ideclSafe) x y
+  -- intentionally leave out ideclImplicit and ideclSourceSrc
+  -- former doesn't matter for this check, latter is prone to whitespace issues
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 minimiseImports
   :: DynFlags
