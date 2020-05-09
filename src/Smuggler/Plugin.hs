@@ -5,38 +5,43 @@ module Smuggler.Plugin
   )
 where
 
-import Control.Monad (unless)
-import Control.Monad.IO.Class (liftIO)
-import Data.List ()
-import Data.Maybe (isJust)
-import DynFlags (DynFlags, HasDynFlags (getDynFlags))
-import ErrUtils
-import GHC (GhcPs, GhcRn, Module, dumpDir, hsmodImports, moduleName, moduleNameString)
-import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import HsSyn (ImportDecl (..))
-import HscTypes (ModSummary (..))
-import IOEnv (readMutVar)
-import Language.Haskell.GHC.ExactPrint (exactPrint, mergeAnns, setEntryDPT, transferEntryDPT, uniqueSrcSpanT)
-import Language.Haskell.GHC.ExactPrint.Transform (graftT, runTransform)
-import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (..))
-import Language.Haskell.GHC.ExactPrint.Utils (showAnnData)
+
+import Control.Monad ( unless )
+import Control.Monad.IO.Class ( liftIO )
+import DynFlags ( dumpDir, DynFlags, HasDynFlags(getDynFlags) )
+import GHC
+    ( moduleNameString,
+      HsModule(hsmodImports),
+      Module(moduleName) )
+import GHC.IO.Encoding ( setLocaleEncoding, utf8 )
+import HsSyn ( ImportDecl(..) )
+import HscTypes ( ModSummary(..) )
+import IOEnv ( readMutVar )
+import Language.Haskell.GHC.ExactPrint ( exactPrint, setEntryDPT )
+import Language.Haskell.GHC.ExactPrint.Transform
+    ( graftT, runTransform )
+import Language.Haskell.GHC.ExactPrint.Types ( DeltaPos(..) )
+import Language.Haskell.GHC.ExactPrint.Utils ()
 import Outputable
+    ( Outputable(ppr), neverQualify, printForUser, vcat )
 import Plugins
-  ( CommandLineOption,
-    Plugin (..),
-    PluginRecompile (..),
-    defaultPlugin,
-  )
-import RdrName (GlobalRdrElt)
-import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports, printMinimalImports)
-import Smuggler.Export (addExplicitExports)
-import Smuggler.Import (minimiseImports)
-import Smuggler.Options (ExportAction (..), ImportAction (..), Options (..), parseCommandLineOptions)
-import Smuggler.Parser (runImportsParser, runParser)
-import SrcLoc (GenLocated (..), unLoc)
-import System.FilePath ((-<.>), (</>))
-import System.IO (IOMode (..), withFile)
-import TcRnTypes (RnM, TcGblEnv (..), TcM)
+    ( CommandLineOption,
+      Plugin(..),
+      PluginRecompile(..),
+      defaultPlugin )
+import RnNames
+    ( ImportDeclUsage, findImportUsage, getMinimalImports )
+import Smuggler.Export ( addExplicitExports )
+import Smuggler.Options
+    ( parseCommandLineOptions,
+      ImportAction(MinimiseImports),
+      Options(exportAction, newExtension, importAction) )
+import Smuggler.Parser ( runParser )
+import SrcLoc ( GenLocated(..), unLoc )
+import System.FilePath ( (-<.>), (</>) )
+import System.IO ( IOMode(..), withFile )
+import TcRnTypes ( RnM, TcGblEnv(..), TcM )
+
 
 plugin :: Plugin
 plugin =
@@ -55,15 +60,16 @@ smugglerPlugin clis modSummary tcEnv = do
   -- TODO:: Used only for debugging (showSDoc dflags (ppr _ ))
   dflags <- getDynFlags
 
+  -- TODO: skip all this if nothing is to be done
   uses <- readMutVar $ tcg_used_gres tcEnv
   let imports = tcg_rn_imports tcEnv
   let usage = findImportUsage imports uses
   let minImpFilePath = mkFilePath dflags (ms_mod modSummary)
   printMinimalImports' dflags minImpFilePath usage
-  tcEnv <$ liftIO (smuggling dflags minImpFilePath uses)
+  tcEnv <$ liftIO (smuggling dflags minImpFilePath)
   where
-    smuggling :: DynFlags -> FilePath -> [GlobalRdrElt] -> IO ()
-    smuggling dflags minImpFilePath usage = do
+    smuggling :: DynFlags -> FilePath -> IO ()
+    smuggling dflags minImpFilePath = do
       -- 0. Read file content as a UTF-8 string (GHC accepts only ASCII or UTF-8)
       -- TODO: Use ms_hspp_buf instead, if we have it?
       setLocaleEncoding utf8
@@ -72,26 +78,22 @@ smugglerPlugin clis modSummary tcEnv = do
 
       modFileContents <- readFile modulePath
       -- parse the whole module
-      runParser modulePath modFileContents >>= \case
+      runParser dflags modulePath modFileContents >>= \case
         Left () -> error "failed to parsei module" -- pure () -- do nothing if file is invalid Haskell
-        Right (anns, astMod@(L astModLoc hsMod)) -> do
+        Right (anns, L astModLoc hsMod) -> do
           minImpFileContents <- readFile minImpFilePath
 
+          -- TODO:: skip if no procesing option is selected
           -- parse the minimal imports file
-          runParser minImpFilePath minImpFileContents >>= \case
+          runParser dflags minImpFilePath minImpFileContents >>= \case
             Left () -> do
-              error "failed to parse minimal imports"
-            Right (anns', astImpMod@(L astImpModLoc hsImpMod)) -> do
-              --liftIO $ putStrLn $ "showAnnData\n" ++ showAnnData anns' 2 ast'
+              error "failed to parse minimal imports" -- pure ()
+            Right (anns', L _ hsImpMod) -> do
 
-              --          let allExports = tcg_exports tcEnv
-              --          let (anns'', ast'') =
-              --                addExplicitExports dflags (exportAction options) allExports (anns', ast')
-
-              --        putStrLn $ "showAnnData\n" ++ showAnnData anns'' 2 ast''
-
-              let (astMod', (anns'', _), s) = runTransform anns $ do
+              -- Is this grafting necessary?
+              let (astMod', (anns'', _), _) = runTransform anns $ do
                     minImports <- graftT anns' (hsmodImports hsImpMod)
+                    -- nudge down the imports list onto a new line
                     unless (null minImports) $ setEntryDPT (head minImports) (DP (2, 0))
                     return $ L astModLoc (hsMod {hsmodImports = minImports})
 
@@ -105,6 +107,8 @@ smugglerPlugin clis modSummary tcEnv = do
               case newExtension options of
                 Nothing -> writeFile modulePath newContent
                 Just ext -> writeFile (modulePath -<.> ext) newContent
+ 
+    -- 
     options :: Options
     options = parseCommandLineOptions clis
 

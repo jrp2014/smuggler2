@@ -10,6 +10,7 @@ import GHC
       HsModule,
       IE(..),
       IEWrappedName(..),
+      LIE,
       Located,
       Name,
       hsmodExports )
@@ -57,7 +58,7 @@ addExplicitExports dflags action exports p@(anns, L astLoc hsMod) =
 
 mkNamesFromAvailInfos :: [AvailInfo] -> [Name]
 mkNamesFromAvailInfos = concatMap availNamesWithSelectors
---Produces all  names made available by the availability information (including overloaded selectors)
+--Produces all names from the availability information (including overloaded selectors)
 --To exclude overloaded selector use availNames
 
 mkLIEVarFromNameT :: Monad m => Name -> TransformT m (Located (IE GhcPs))
@@ -76,9 +77,14 @@ mkLIEVarFromNameT name = do
       )
     )
 
-addExportDeclAnnT :: Monad m => Located (IE GhcPs) -> TransformT m ()
+addExportDeclAnnT :: Monad m => LIE GhcPs  -> TransformT m ()
 addExportDeclAnnT (L _ (IEVar _ (L _ (IEName x)))) =
   addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
+addExportDeclAnnT (L _ (IEVar _ (L _ (IEPattern x)))) =
+  addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
+addExportDeclAnnT (L _ (IEVar _ (L _ (IEType x)))) =
+  addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
+--TODO: cases other than IEVar?
 
 addCommaT :: Monad m => Located (IE GhcPs) -> TransformT m ()
 addCommaT x = addSimpleAnnT x (DP (0, 0)) [(G AnnComma, DP (0, 0))]
