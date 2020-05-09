@@ -1,13 +1,14 @@
 # smuggler
 
 ![smuggler-logo](https://user-images.githubusercontent.com/4276606/45937457-c2715c00-bff2-11e8-9766-f91051d36ffe.png)
+
 <!--
 [![Hackage](https://img.shields.io/hackage/v/smuggler.svg?logo=haskell)](https://hackage.haskell.org/package/smuggler)
 [![Build](https://img.shields.io/travis/kowainik/smuggler.svg?logo=travis)](http://travis-ci.org/kowainik/smuggler)
 -->
+
 [![MPL-2.0 license](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/kowainik/smuggler/blob/master/LICENSE)
 ![Github CI](https://github.com/jrp2014/smuggler/workflows/Smuggler/badge.svg)
-
 
 > “So many people consider their work a daily punishment. Whereas I love my work
 > as a translator. Translation is a journey over a sea from one shore to the
@@ -29,26 +30,28 @@ compiler options:
 
 The Plugin has serveral (case-inseneitive) options:
 
-* `NoImportProcessing` - do no import processing
-* `PreserveInstanceImports` - remove unused imports, but preserve a library import stub.
-such as  `import Mod ()`, to import only instances of typeclasses from it. (The default.)
-* `MinimiseImports` - remove unused imports, including any that may be needed to
-import typeclass instances.  This may, therefore, stop the module from compiling.
+- `NoImportProcessing` - do no import processing
+- `PreserveInstanceImports` - remove unused imports, but preserve a library import stub.
+  such as `import Mod ()`, to import only instances of typeclasses from it. (The default.)
+- `MinimiseImports` - remove unused imports, including any that may be needed to
+  import typeclass instances. This may, therefore, stop the module from compiling.
 
-* `NoExportProcessing` - do no export processing
-* `AddExplicitExports` - add an explicit list of all available exports (excluding
-those that are imported) if there is no existing export list. (The default.)
-You may want to edit it to keep specific values, types or classes local to the module.
-At present, a typeclass and its class methods are exported individually.  You may want to
-replace those exports with an abbreviation such as `C(..)`.
-* `ReplaceExports` - replace any existing module export list with one containing all
-available exports (which you can, of course, then prune to your requirements).
+- `NoExportProcessing` - do no export processing
+- `AddExplicitExports` - add an explicit list of all available exports (excluding
+  those that are imported) if there is no existing export list. (The default.)
+  You may want to edit it to keep specific values, types or classes local to the module.
+  At present, a typeclass and its class methods are exported individually. You may want to
+  replace those exports with an abbreviation such as `C(..)`.
+- `ReplaceExports` - replace any existing module export list with one containing all
+  available exports (which you can, of course, then prune to your requirements).
 
 Any other option value is used to generate a source file with the option value used as
 a new extension rather than replacing the original file. For example,
+
 ```
 -fplugins-opt=Smuggler.Plugin:new
 ```
+
 will create output files with a `.new` suffix rather the overwriting the originals.
 
 A lovely addition to this package is that it automatically supports on-the-fly
@@ -60,21 +63,37 @@ ghcid --command='cabal repl'
 ```
 
 ## Caveats
-`smuggler` does not remove imports completely because an import may be being
-used to only import instances of typeclasses, So it will leave stubs like
 
-```haskell
-import Mod ()
-```
+- By default `smuggler` does not remove imports completely because an import may be being
+  used to only import instances of typeclasses, So it will leave stubs like
 
-that you may need to remove manually.
+  ```haskell
+  import Mod ()
+  ```
+
+  that you may need to remove manually. Alternatively use the `MinimiseImports` option to
+  remove them anyway.
+
+- Any comments in the import block will be discarded
+
+- CPP files may not be processed correctly
+
+- `smuggler` depends on the current `ghc` compiler and `base` library to check
+  whether an import is redundant. Earlier versions of the compiler may, of
+  course, need it. The [base library
+  changelog](https://hackage.haskell.org/package/base/changelog) provides some
+  details of what was made available when.
+
+- Literate Haskell `lhs` files are not supported
+
+- `hiding` clauses may not be properly analysed
 
 ## For contributors
 
 Requirements:
 
-* `ghc-8.8.3`
-* `cabal >= 3.0` or `stack >= 2.0`
+- `ghc-8.10.1` (untested with earlier versions)
+- `cabal >= 3.0` or `stack >= 2.0`
 
 ### Cabal: How to build?
 
@@ -97,6 +116,68 @@ stack build
 
 ### Run tests
 
+There are a couple of test suites that differ only by the `smuggler` options
+used. Do not run `cabal test` on its own, as it will run test suites in
+parallel, which will lead to strange results, as they will overwrite each
+others' intermediate artefacts.
+
 ```shell
-cabal test --enable-tests
+cabal test smuggler-test --enable-tests
+cabal test smuggler-test-maximal --enable-tests
 ```
+
+## Implementation approach
+
+`smuggler` uses the `ghc-exactprint`
+[library](https://hackage.haskell.org/package/ghc-exactprint) to modiify the
+source code. The documentation for the library is fairly spartan, and the
+library is not widely used, so the use here may be sub-optimal.
+
+The library is needed because the annotated AST that GHC generates does not have enough
+information to reconstitute the original source. For example, certain keywords,
+brackets, commas and formatting layout are lost. `ghc-exactprint` provides parsers that
+preserve this information, which is stored in a separate
+`Anns` `Map` is used to generate properly formatted source text.
+
+To make manipulation of GHC's AST and `ghc-exactprint`'s `Anns` easier,
+`ghc-exactprint` provides a set of Transform functions. These are intended to facilitate
+making changes to the AST and adjusting the `Anns` to suit the changes. (These functions
+are [said to
+be](https://hackage.haskell.org/package/ghc-exactprint-0.6.3/docs/Language-Haskell-GHC-ExactPrint-Transform.html)
+and it is not obvious how they are intended to be used a or composed. (The
+approach [provided by](https://hackage.haskell.org/package/retrie) `retrie`
+wraps an AST and `Anns` into a single type that seems to make AST
+transformations, while preserving source syntax, easier to compose.)
+
+### Imports
+
+`smuggler` uses GHC to generate a set of minimal imports. It
+
+- parses the original file
+- dumps the minimal exports that GHC generates and parses them back in (to pick
+  up the annotations needed for printing)
+- drops implicit imports (such as Prelude) and, optionally, imports that are
+  for instances only
+- replaces the original imports with minimal ones
+- `exactprint`s the result back over the original file (or one with a different
+  suffix, if that was specified as option to `smuggler`)
+
+A point of additional complexity is that the AST provided by GHC to `smuggler`
+is of a different type from the AST that `ghc-exactprint` produces. (It is the
+product of the renaming phase of the compiler, while `ghc-exactprint` produces
+a parse phase AST.)
+
+### Exports
+
+Exports are simpler to deal with. GHC generates a list of all the things that
+are in scope (`AvailInfo`) which can be used to generate a list of `Name`s
+(currently via `availNamesWithSelectors`). This list is turned into Haskell
+syntax used to replace the existing export list, if any.
+
+## Other projects
+
+- the [original version](https://hackage.haskell.org/package/smuggler) of `smuggler`
+- `retrie` a [code modding tool](https://hackage.haskell.org/package/retrie)
+  that works with GHC 8.10.1
+- `refact-global-hse` an ambitious [import refactoring tool](https://github.com/ddssff/refact-global-hse).
+   This uses `haskell-src-exts` rather than `ghc-exactprint` and so may not work with current versions of GHC.
