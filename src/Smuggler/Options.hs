@@ -12,6 +12,7 @@ import Plugins ( CommandLineOption )
 
 
 data ImportAction = NoImportProcessing | PreserveInstanceImports | MinimiseImports
+   deriving (Eq)
 
 data ExportAction = NoExportProcessing | AddExplicitExports | ReplaceExports
 

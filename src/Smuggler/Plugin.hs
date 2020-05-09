@@ -5,20 +5,21 @@ module Smuggler.Plugin
   )
 where
 
-import Control.Monad(unless)
+import Control.Monad (unless)
 import Control.Monad.IO.Class (liftIO)
 import Data.List ()
+import Data.Maybe (isJust)
 import DynFlags (DynFlags, HasDynFlags (getDynFlags))
 import ErrUtils
-import GHC (Module, dumpDir, hsmodImports, moduleName, moduleNameString)
+import GHC (GhcPs, GhcRn, Module, dumpDir, hsmodImports, moduleName, moduleNameString)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import HsSyn (ImportDecl (ideclImplicit))
+import HsSyn (ImportDecl (..))
 import HscTypes (ModSummary (..))
 import IOEnv (readMutVar)
-import Language.Haskell.GHC.ExactPrint (setEntryDPT, transferEntryDPT, uniqueSrcSpanT, exactPrint, mergeAnns)
+import Language.Haskell.GHC.ExactPrint (exactPrint, mergeAnns, setEntryDPT, transferEntryDPT, uniqueSrcSpanT)
 import Language.Haskell.GHC.ExactPrint.Transform (graftT, runTransform)
+import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (..))
 import Language.Haskell.GHC.ExactPrint.Utils (showAnnData)
-import Language.Haskell.GHC.ExactPrint.Types (DeltaPos(..))
 import Outputable
 import Plugins
   ( CommandLineOption,
@@ -30,10 +31,10 @@ import RdrName (GlobalRdrElt)
 import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports, printMinimalImports)
 import Smuggler.Export (addExplicitExports)
 import Smuggler.Import (minimiseImports)
-import Smuggler.Options (Options (..), parseCommandLineOptions)
+import Smuggler.Options (ExportAction (..), ImportAction (..), Options (..), parseCommandLineOptions)
 import Smuggler.Parser (runImportsParser, runParser)
 import SrcLoc (GenLocated (..), unLoc)
-import System.FilePath ( (</>), (-<.>) )
+import System.FilePath ((-<.>), (</>))
 import System.IO (IOMode (..), withFile)
 import TcRnTypes (RnM, TcGblEnv (..), TcM)
 
@@ -54,23 +55,21 @@ smugglerPlugin clis modSummary tcEnv = do
   -- TODO:: Used only for debugging (showSDoc dflags (ppr _ ))
   dflags <- getDynFlags
 
-  --let modulePath = ms_hspp_file modSummary
   uses <- readMutVar $ tcg_used_gres tcEnv
   let imports = tcg_rn_imports tcEnv
   let usage = findImportUsage imports uses
   let minImpFilePath = mkFilePath dflags (ms_mod modSummary)
-  printMinimalImports' dflags minImpFilePath usage -- only need to do this if the dumpminimalimports flag is not set?
+  printMinimalImports' dflags minImpFilePath usage
   tcEnv <$ liftIO (smuggling dflags minImpFilePath uses)
   where
     smuggling :: DynFlags -> FilePath -> [GlobalRdrElt] -> IO ()
     smuggling dflags minImpFilePath usage = do
-      let options = parseCommandLineOptions clis
-
       -- 0. Read file content as a UTF-8 string (GHC accepts only ASCII or UTF-8)
       -- TODO: Use ms_hspp_buf instead, if we have it?
       setLocaleEncoding utf8
 
       let modulePath = ms_hspp_file modSummary
+
       modFileContents <- readFile modulePath
       -- parse the whole module
       runParser modulePath modFileContents >>= \case
@@ -96,15 +95,22 @@ smugglerPlugin clis modSummary tcEnv = do
                     unless (null minImports) $ setEntryDPT (head minImports) (DP (2, 0))
                     return $ L astModLoc (hsMod {hsmodImports = minImports})
 
-              liftIO $ putStrLn $ "showAnnData\n" ++ showAnnData anns'' 2 astMod'
+              -- liftIO $ putStrLn $ "showAnnData\n" ++ showAnnData anns'' 2 astMod'
+  
+              let allExports = tcg_exports tcEnv
+              let (anns''', astMod'') =
+                              addExplicitExports dflags (exportAction options) allExports (anns'', astMod')
 
-              let newContent = exactPrint astMod' anns''
+              let newContent = exactPrint astMod'' anns'''
               case newExtension options of
                 Nothing -> writeFile modulePath newContent
                 Just ext -> writeFile (modulePath -<.> ext) newContent
+    options :: Options
+    options = parseCommandLineOptions clis
 
-    -- This version ignores implcit imports as the result cannot be parsed
-    -- back in.  (It has an '(implicit)')
+    -- This version of the GHC function ignores implicit imports, as the result cannot be parsed
+    -- back in.  (There is an extraneous (implicit)')
+    -- It also provides for leaving out instance-only imports (eg, Data.List() )
     printMinimalImports' :: DynFlags -> FilePath -> [ImportDeclUsage] -> RnM ()
     printMinimalImports' dflags filename imports_w_usage =
       do
@@ -114,15 +120,28 @@ smugglerPlugin clis modSummary tcEnv = do
             filename
             WriteMode
             ( \h ->
-                printForUser dflags h neverQualify (vcat (map ppr (filter (not . ideclImplicit . unLoc) imports')))
+                -- The neverQualify is important.  We are printing Names
+                -- but they are in the context of an 'import' decl, and
+                -- we never qualify things inside there
+                -- E.g.   import Blag( f, b )
+                -- not    import Blag( Blag.f, Blag.g )!
+                printForUser dflags h neverQualify (vcat (map ppr (filter (letThrough . unLoc) imports')))
             )
+      where
+        notImplicit :: ImportDecl pass -> Bool
+        notImplicit = not . ideclImplicit
+        
+        notInstancesOnly :: ImportDecl pass -> Bool
+        notInstancesOnly i = case ideclHiding i of
+          Just (False, L _ []) -> False
+          _ -> True
 
-    -- The neverQualify is important.  We are printing Names
-    -- but they are in the context of an 'import' decl, and
-    -- we never qualify things inside there
-    -- E.g.   import Blag( f, b )
-    -- not    import Blag( Blag.f, Blag.g )!
-
+        keepInstanceOnlyImports :: Bool
+        keepInstanceOnlyImports = importAction options /= MinimiseImports
+        
+        letThrough :: ImportDecl pass -> Bool
+        letThrough i = notImplicit i && (keepInstanceOnlyImports || notInstancesOnly i)
+   
     mkFilePath :: DynFlags -> Module -> FilePath
     mkFilePath dflags this_mod
       | Just d <- dumpDir dflags = d </> basefn
