@@ -1,9 +1,9 @@
 module Main (
   main ) where
 
-import Data.Bool ( bool)
+import Data.Bool ( bool )
 import Data.List ()
-import Data.Maybe (fromMaybe)
+import Data.Maybe ( fromMaybe )
 
 main :: IO ()
 main = do

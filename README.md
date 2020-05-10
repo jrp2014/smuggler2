@@ -180,4 +180,4 @@ syntax used to replace the existing export list, if any.
 - `retrie` a [code modding tool](https://hackage.haskell.org/package/retrie)
   that works with GHC 8.10.1
 - `refact-global-hse` an ambitious [import refactoring tool](https://github.com/ddssff/refact-global-hse).
-   This uses `haskell-src-exts` rather than `ghc-exactprint` and so may not work with current versions of GHC.
+  This uses `haskell-src-exts` rather than `ghc-exactprint` and so may not work with current versions of GHC.

@@ -1,26 +1,17 @@
-module Smuggler.Export (addExplicitExports, mkLIEVarFromNameT, addCommaT, addParensT) where
+module Smuggler.Export (addExplicitExports) where
 
 import Avail ( AvailInfo, availNamesWithSelectors )
 import Control.Monad ( unless )
 import Data.Maybe ( isNothing )
 import DynFlags ( DynFlags )
-import GHC
-    ( AnnKeywordId(..),
-      GenLocated(..),
-      HsModule,
-      IE(..),
-      IEWrappedName(..),
-      LIE,
-      Located,
-      Name,
-      hsmodExports )
-import Language.Haskell.GHC.ExactPrint.Transform
-    ( TransformT, addSimpleAnnT, runTransform, uniqueSrcSpanT )
-import Language.Haskell.GHC.ExactPrint.Types
-    ( Anns, DeltaPos(DP), GhcPs, KeywordId(G), noExt )
-import OccName ( HasOccName(occName), OccName(occNameFS) )
-import RdrName ( mkVarUnqual )
+import GHC ( GenLocated(L), Located, Name, HsModule(hsmodExports) )
+import Language.Haskell.GHC.ExactPrint.Transform ( runTransform )
+import Language.Haskell.GHC.ExactPrint.Types ( Anns, GhcPs )
+import OccName ()
+import RdrName ()
 import Smuggler.Options ( ExportAction(..) )
+import Smuggler.Anns
+    ( addCommaT, addExportDeclAnnT, addParensT, mkLIEVarFromNameT )
 
 -- See https://www.machinesung.com/scribbles/terser-import-declarations.html
 -- and https://www.machinesung.com/scribbles/ghc-api.html
@@ -60,37 +51,3 @@ mkNamesFromAvailInfos :: [AvailInfo] -> [Name]
 mkNamesFromAvailInfos = concatMap availNamesWithSelectors
 --Produces all names from the availability information (including overloaded selectors)
 --To exclude overloaded selector use availNames
-
-mkLIEVarFromNameT :: Monad m => Name -> TransformT m (Located (IE GhcPs))
-mkLIEVarFromNameT name = do
-  -- Could use only one loc as it would be used on different constructors
-  -- and not, therefore, get overwritten on subsequent uses.
-  locIEVar  <- uniqueSrcSpanT
-  locIEName <- uniqueSrcSpanT
-  locUnqual <- uniqueSrcSpanT
-  return $ L
-    locIEVar
-    (IEVar
-      noExt
-      (L locIEName
-         (IEName (L locUnqual (mkVarUnqual ((occNameFS . occName) name))))
-      )
-    )
-
-addExportDeclAnnT :: Monad m => LIE GhcPs  -> TransformT m ()
-addExportDeclAnnT (L _ (IEVar _ (L _ (IEName x)))) =
-  addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
-addExportDeclAnnT (L _ (IEVar _ (L _ (IEPattern x)))) =
-  addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
-addExportDeclAnnT (L _ (IEVar _ (L _ (IEType x)))) =
-  addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
---TODO: cases other than IEVar?
-
-addCommaT :: Monad m => Located (IE GhcPs) -> TransformT m ()
-addCommaT x = addSimpleAnnT x (DP (0, 0)) [(G AnnComma, DP (0, 0))]
-
-addParensT :: Monad m => Located [Located (IE GhcPs)] -> TransformT m ()
-addParensT x = addSimpleAnnT
-  x
-  (DP (0, 1))
-  [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 1))]

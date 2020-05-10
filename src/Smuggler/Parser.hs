@@ -7,8 +7,7 @@ where
 import Language.Haskell.GHC.ExactPrint ( Anns )
 import Language.Haskell.GHC.ExactPrint.Parsers
     ( parseModuleFromString )
-import HsExtension ( GhcPs )
-import HsSyn ( HsModule )
+import GHC ( GhcPs, HsModule )
 import SrcLoc ( Located )
 import DynFlags ( DynFlags )
 import ErrUtils ( printBagOfErrors )

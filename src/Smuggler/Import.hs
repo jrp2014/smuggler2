@@ -7,13 +7,10 @@ import           GHC                            ( ieName
                                                 , HsModule(hsmodImports)
                                                 , ModuleName
                                                 , hsmodName
-                                                )
-import           HsImpExp                       ( ImportDecl
                                                 , ImportDecl(..)
                                                 , LIE
                                                 , LImportDecl
-                                                )
-import           HsSyn                          ( GhcRn )
+                                                , GhcRn )
 import           Language.Haskell.GHC.ExactPrint.Transform
                                                 ( removeTrailingCommaT
                                                 , runTransform
@@ -30,7 +27,7 @@ import           RdrName                        ( GlobalRdrElt(..) )
 import           RnNames                        ( findImportUsage
                                                 , ImportDeclUsage
                                                 )
-import           Smuggler.Export                ( mkLIEVarFromNameT
+import           Smuggler.Anns                ( mkLIEVarFromNameT
                                                 , addCommaT
                                                 , addParensT
                                                 )

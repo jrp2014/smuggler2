@@ -12,9 +12,8 @@ import DynFlags ( dumpDir, DynFlags, HasDynFlags(getDynFlags) )
 import GHC
     ( moduleNameString,
       HsModule(hsmodImports),
-      Module(moduleName) )
+      Module(moduleName) , ImportDecl(..))
 import GHC.IO.Encoding ( setLocaleEncoding, utf8 )
-import HsSyn ( ImportDecl(..) )
 import HscTypes ( ModSummary(..) )
 import IOEnv ( readMutVar )
 import Language.Haskell.GHC.ExactPrint ( exactPrint, setEntryDPT )
@@ -51,7 +50,8 @@ plugin =
     }
 
 -- TODO: would it be worth computing a fingerprint to force recompile if
--- imports were removed?
+-- imports were removed? Or don't recompile if CommandLineOptions indicate a
+-- noop
 smugglerRecompile :: [CommandLineOption] -> IO PluginRecompile
 smugglerRecompile _ = return NoForceRecompile
 
@@ -151,4 +151,4 @@ smugglerPlugin clis modSummary tcEnv = do
       | Just d <- dumpDir dflags = d </> basefn
       | otherwise = basefn
       where
-        basefn = moduleNameString (moduleName this_mod) ++ ".imports"
+        basefn = "smuggler-" ++ moduleNameString (moduleName this_mod) ++ ".imports"
