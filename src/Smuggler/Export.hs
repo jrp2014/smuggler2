@@ -1,53 +1,65 @@
 module Smuggler.Export (addExplicitExports) where
 
-import Avail ( AvailInfo, availNamesWithSelectors )
-import Control.Monad ( unless )
-import Data.Maybe ( isNothing )
-import DynFlags ( DynFlags )
-import GHC ( GenLocated(L), Located, Name, HsModule(hsmodExports) )
-import Language.Haskell.GHC.ExactPrint.Transform ( runTransform )
-import Language.Haskell.GHC.ExactPrint.Types ( Anns, GhcPs )
-import OccName ()
-import RdrName ()
-import Smuggler.Options ( ExportAction(..) )
+import Avail (AvailInfo, availNamesWithSelectors)
+import Control.Monad (guard)
+import Data.Maybe (isNothing)
+import GHC (GenLocated (L), HsModule (hsmodExports), LIE, Located, Name, unLoc)
+import Language.Haskell.GHC.ExactPrint.Transform (TransformT, graftT, runTransform, getAnnsT)
+import Language.Haskell.GHC.ExactPrint.Types (Anns, GhcPs)
 import Smuggler.Anns
-    ( addCommaT, addExportDeclAnnT, addParensT, mkLIEVarFromNameT )
+  ( addCommaT,
+    addExportDeclAnnT,
+    addParensT,
+    mkLIEVarFromNameT,
+    mkLoc,
+    mkParen,
+  )
+import Smuggler.Options (ExportAction (..))
 
 -- See https://www.machinesung.com/scribbles/terser-import-declarations.html
 -- and https://www.machinesung.com/scribbles/ghc-api.html
 
-
-addExplicitExports
-  :: DynFlags
-  -> ExportAction
-  -> [AvailInfo]
-  -> (Anns, Located (HsModule GhcPs))
-  -> (Anns, Located (HsModule GhcPs))
-addExplicitExports dflags action exports p@(anns, L astLoc hsMod) =
+addExplicitExports ::
+  Monad m =>
+  ExportAction ->
+  -- | The exports to be added
+  [AvailInfo] ->
+  -- | target module
+  Located (HsModule GhcPs) ->
+  TransformT m (Located (HsModule GhcPs))
+addExplicitExports action exports t@(L astLoc hsMod) =
   case action of
-    NoExportProcessing -> p
+    NoExportProcessing -> return t
     AddExplicitExports ->
-      if isNothing currentExplicitExports then (anns', ast') else p
-    ReplaceExports -> (anns', ast')
- where
-  currentExplicitExports  = hsmodExports hsMod
+      if isNothing currentExplicitExports then result else return t
+    ReplaceExports -> result
+  where
 
-  (ast', (anns', _n), _s) = runTransform anns $ do
+    currentExplicitExports :: Maybe (Located [LIE GhcPs])
+    currentExplicitExports = hsmodExports hsMod
 
-    let names = mkNamesFromAvailInfos exports
+    names :: [Name]
+    names = reverse $ mkNamesFromAvailInfos exports -- TODO check the ordering
 
-    exportsList <- mapM mkLIEVarFromNameT names
-    mapM_ addExportDeclAnnT exportsList
-    unless (null exportsList) $ mapM_ addCommaT (init exportsList)
+    result :: Monad m => TransformT m (Located (HsModule GhcPs))
+    result
+      | null names = return t
+      | otherwise = do
 
-    let lExportsList = L astLoc exportsList
-        hsMod'       = hsMod { hsmodExports = Just lExportsList }
-    unless (null exportsList) $ addParensT lExportsList
+        -- Generate the (annotated) exports list
+        exportsList <- mapM mkLIEVarFromNameT names
+        mapM_ addExportDeclAnnT exportsList
+        mapM_ addCommaT (init exportsList)
 
-    return (L astLoc hsMod')
+        lExportsList <- mkLoc exportsList >>= mkParen unLoc
 
+        -- Graft back
+        anns <- getAnnsT
+        lExportsList' <- graftT anns lExportsList
 
+        return $ L astLoc hsMod {hsmodExports = Just lExportsList'}
+
+-- | Produces all names from the availability information (including overloaded selectors)
+--   To exclude overloaded selector use availNames
 mkNamesFromAvailInfos :: [AvailInfo] -> [Name]
 mkNamesFromAvailInfos = concatMap availNamesWithSelectors
---Produces all names from the availability information (including overloaded selectors)
---To exclude overloaded selector use availNames

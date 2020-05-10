@@ -6,7 +6,7 @@ module Smuggler.Plugin
 where
 
 
-import Control.Monad ( unless )
+import Control.Monad ( unless, when )
 import Control.Monad.IO.Class ( liftIO )
 import DynFlags ( dumpDir, DynFlags, HasDynFlags(getDynFlags) )
 import GHC
@@ -18,7 +18,7 @@ import HscTypes ( ModSummary(..) )
 import IOEnv ( readMutVar )
 import Language.Haskell.GHC.ExactPrint ( exactPrint, setEntryDPT )
 import Language.Haskell.GHC.ExactPrint.Transform
-    ( graftT, runTransform )
+    ( graftT, runTransform, runTransformFrom )
 import Language.Haskell.GHC.ExactPrint.Types ( DeltaPos(..) )
 import Language.Haskell.GHC.ExactPrint.Utils ()
 import Outputable
@@ -26,14 +26,15 @@ import Outputable
 import Plugins
     ( CommandLineOption,
       Plugin(..),
-      PluginRecompile(..),
+      purePlugin,
       defaultPlugin )
 import RnNames
     ( ImportDeclUsage, findImportUsage, getMinimalImports )
 import Smuggler.Export ( addExplicitExports )
+import Smuggler.Import ( replaceImports )
 import Smuggler.Options
     ( parseCommandLineOptions,
-      ImportAction(MinimiseImports),
+      ImportAction(..), ExportAction(..),
       Options(exportAction, newExtension, importAction) )
 import Smuggler.Parser ( runParser )
 import SrcLoc ( GenLocated(..), unLoc )
@@ -46,17 +47,18 @@ plugin :: Plugin
 plugin =
   defaultPlugin
     { typeCheckResultAction = smugglerPlugin,
-      pluginRecompile = smugglerRecompile
+      pluginRecompile = purePlugin -- ^ Don't force recompilation.  [Is this the right approach?]
     }
 
--- TODO: would it be worth computing a fingerprint to force recompile if
--- imports were removed? Or don't recompile if CommandLineOptions indicate a
--- noop
-smugglerRecompile :: [CommandLineOption] -> IO PluginRecompile
-smugglerRecompile _ = return NoForceRecompile
-
+-- | 
+noop :: [CommandLineOption] -> Bool
+noop clopts = (importAction options == NoImportProcessing) && (exportAction options == NoExportProcessing)
+  where
+    options = parseCommandLineOptions clopts
 smugglerPlugin :: [CommandLineOption] -> ModSummary -> TcGblEnv -> TcM TcGblEnv
-smugglerPlugin clis modSummary tcEnv = do
+smugglerPlugin clopts modSummary tcEnv = do
+  when (noop clopts) (pure ())
+
   -- TODO:: Used only for debugging (showSDoc dflags (ppr _ ))
   dflags <- getDynFlags
 
@@ -79,38 +81,44 @@ smugglerPlugin clis modSummary tcEnv = do
       modFileContents <- readFile modulePath
       -- parse the whole module
       runParser dflags modulePath modFileContents >>= \case
-        Left () -> error "failed to parsei module" -- pure () -- do nothing if file is invalid Haskell
-        Right (anns, L astModLoc hsMod) -> do
+        Left () -> pure () -- do nothing if file is invalid Haskell
+        Right (annsHsMod, astHsMod@(L astHsModLoc hsMod)) -> do
           minImpFileContents <- readFile minImpFilePath
 
           -- TODO:: skip if no procesing option is selected
           -- parse the minimal imports file
           runParser dflags minImpFilePath minImpFileContents >>= \case
-            Left () -> do
-              error "failed to parse minimal imports" -- pure ()
-            Right (anns', L _ hsImpMod) -> do
+            Left () -> pure ()
+            Right (annsImpMod, L _ impMod) -> do
 
-              -- Is this grafting necessary?
-              let (astMod', (anns'', _), _) = runTransform anns $ do
-                    minImports <- graftT anns' (hsmodImports hsImpMod)
+              let (astHsMod', (annsHsMod', locIndex), ilog) = runTransform annsHsMod $ do
+                    minImports <- graftT annsImpMod (hsmodImports impMod)
                     -- nudge down the imports list onto a new line
                     unless (null minImports) $ setEntryDPT (head minImports) (DP (2, 0))
-                    return $ L astModLoc (hsMod {hsmodImports = minImports})
+                    return $ L astHsModLoc (hsMod {hsmodImports = minImports})
+
+{-
+                    replaceImports (importAction options) annsImpMod (hsmodImports impMod) astHsMod
+-}
+
+              liftIO $ putStrLn $ "Imports transformed " ++ unlines ilog
 
               -- liftIO $ putStrLn $ "showAnnData\n" ++ showAnnData anns'' 2 astMod'
   
               let allExports = tcg_exports tcEnv
-              let (anns''', astMod'') =
-                              addExplicitExports dflags (exportAction options) allExports (anns'', astMod')
+              let (astHsMod'', (annsHsMod'', _), elog) = runTransformFrom locIndex annsHsMod' $
+                              addExplicitExports (exportAction options) allExports astHsMod'
 
-              let newContent = exactPrint astMod'' anns'''
+              liftIO $ putStrLn $ "Exoprts transformed " ++ unlines elog
+
+              let newContent = exactPrint astHsMod'' annsHsMod''
               case newExtension options of
                 Nothing -> writeFile modulePath newContent
                 Just ext -> writeFile (modulePath -<.> ext) newContent
  
     -- 
     options :: Options
-    options = parseCommandLineOptions clis
+    options = parseCommandLineOptions clopts
 
     -- This version of the GHC function ignores implicit imports, as the result cannot be parsed
     -- back in.  (There is an extraneous (implicit)')

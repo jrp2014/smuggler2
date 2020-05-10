@@ -68,6 +68,8 @@ addParensT x =
 -------------------------------------------------------------------------------
 -- From retrie
 
+-- | `mkLoc` generates a unique location and wraps the given ast chunk with that location
+-- Also adds an empty annotation at that location
 mkLoc :: (Data e, Monad m) => e -> TransformT m (Located e)
 mkLoc e = do
   le <- L <$> uniqueSrcSpanT <*> pure e
@@ -80,7 +82,8 @@ mkParen ::
   TransformT m (Located x)
 mkParen k e = do
   pe <- mkLoc (k e)
-  _ <- setAnnsFor pe [(G GHC.AnnOpenP, DP (0, 0)), (G GHC.AnnCloseP, DP (0, 0))]
+  -- There may be some other way of getting gap in front of the paren?
+  _ <- setAnnsFor pe [(G GHC.AnnOpenP, DP (0, 1)), (G GHC.AnnCloseP, DP (0, 1))]
   swapEntryDPT e pe
   return pe
 

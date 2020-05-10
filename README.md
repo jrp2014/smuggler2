@@ -141,13 +141,15 @@ preserve this information, which is stored in a separate
 
 To make manipulation of GHC's AST and `ghc-exactprint`'s `Anns` easier,
 `ghc-exactprint` provides a set of Transform functions. These are intended to facilitate
-making changes to the AST and adjusting the `Anns` to suit the changes. (These functions
-are [said to
-be](https://hackage.haskell.org/package/ghc-exactprint-0.6.3/docs/Language-Haskell-GHC-ExactPrint-Transform.html)
-and it is not obvious how they are intended to be used a or composed. (The
-approach [provided by](https://hackage.haskell.org/package/retrie) `retrie`
-wraps an AST and `Anns` into a single type that seems to make AST
-transformations, while preserving source syntax, easier to compose.)
+making changes to the AST and adjusting the `Anns` to suit the changes.
+
+> These functions are [said to be under active development](https://hackage.haskell.org/package/ghc-exactprint-0.6.3/docs/Language-Haskell-GHC-ExactPrint-Transform.html).
+> It is not obvious how they are intended to be used or composed. The
+> approach provided by [`retrie`](https://hackage.haskell.org/package/retrie)
+> wraps an AST and `Anns` into a single type that seems to make AST
+> transformations easier to compose and reduces the risk of the `Anns` and AST getting
+> out of sync as it is being transformed, something with which the type system doesnt'
+> help you since the `Anns` are stored as a `Map`.
 
 ### Imports
 

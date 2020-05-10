@@ -127,11 +127,11 @@ test-suite smuggler-test
   type:        exitcode-stdio-1.0
   main-is:     Test.hs
   ghc-options: -fplugin-opt=Smuggler.Plugin:test
+   -fplugin-opt=Smuggler.Plugin:NoExportProcessing
+--   -fplugin-opt=Smuggler.Plugin:NoImportProcessing
+--   -fplugin-opt=Smuggler.Plugin:MinimiseImports
 
---   -fplugin-opt=Smuggler.Plugin:NoExportProcessing
---    -fplugin-opt=Smuggler.Plugin:MinimiseImports
-
-test-suite smuggler-test-maximal
+test-suite smuggler-test-minimal-imports
   import:      common-tests
   type:        exitcode-stdio-1.0
   main-is:     Test.hs

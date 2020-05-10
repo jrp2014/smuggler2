@@ -1,41 +1,42 @@
 module Smuggler.Options
-  ( Options(..)
-  , parseCommandLineOptions
-  , ImportAction(..)
-  , ExportAction(..)
+  ( Options (..),
+    parseCommandLineOptions,
+    ImportAction (..),
+    ExportAction (..),
   )
 where
 
-import Data.List ( foldl' )
-import Data.Char ( toLower )
-import Plugins ( CommandLineOption )
-
+import Data.Char (toLower)
+import Data.List (foldl')
+import Plugins (CommandLineOption)
 
 data ImportAction = NoImportProcessing | PreserveInstanceImports | MinimiseImports
-   deriving (Eq)
+  deriving (Eq)
 
 data ExportAction = NoExportProcessing | AddExplicitExports | ReplaceExports
+  deriving (Eq)
 
-data Options
-  = Options
-      { importAction :: ImportAction,
-        exportAction :: ExportAction,
-        newExtension :: Maybe String
-      }
+data Options = Options
+  { importAction :: ImportAction,
+    exportAction :: ExportAction,
+    newExtension :: Maybe String
+  }
 
+-- | The default is to retain instance-only imports (eg, Data.List () )
+-- and add explict exports only if they are not already present
 defaultOptions :: Options
 defaultOptions = Options PreserveInstanceImports AddExplicitExports Nothing
 
-parseCommandLineOption :: Options -> CommandLineOption -> Options
-parseCommandLineOption opts clo = case toLower <$> clo of
-  "noimportprocessing"      -> opts { importAction = NoImportProcessing }
-  "preserveinstanceimports" -> opts { importAction = PreserveInstanceImports }
-  "minimiseimports"         -> opts { importAction = MinimiseImports }
-  "noexportprocessing"      -> opts { exportAction = NoExportProcessing }
-  "addexplicitexports"      -> opts { exportAction = AddExplicitExports }
-  "replaceexports"          -> opts { exportAction = ReplaceExports }
-  extension                 -> opts { newExtension = Just extension }
-
-
+-- | Simple command line option parser.  Last occurrence wins.
 parseCommandLineOptions :: [CommandLineOption] -> Options
 parseCommandLineOptions = foldl' parseCommandLineOption defaultOptions
+  where
+    parseCommandLineOption :: Options -> CommandLineOption -> Options
+    parseCommandLineOption opts clo = case toLower <$> clo of
+      "noimportprocessing" -> opts {importAction = NoImportProcessing}
+      "preserveinstanceimports" -> opts {importAction = PreserveInstanceImports}
+      "minimiseimports" -> opts {importAction = MinimiseImports}
+      "noexportprocessing" -> opts {exportAction = NoExportProcessing}
+      "addexplicitexports" -> opts {exportAction = AddExplicitExports}
+      "replaceexports" -> opts {exportAction = ReplaceExports}
+      extension -> opts {newExtension = Just extension}

@@ -1,0 +1,22 @@
+# Things to be done
+
+- [ ] cut out unused code
+
+- [ ] reuse mkParens and other helpers from retrie
+
+- [ ] refactor so that ast and anns are not threaded so explicitly through the code
+
+- [ ] check that smuggler really works with different export types
+
+- [ ] does hiding work?
+
+- [ ] does CPP work?
+
+- [ ] get the tests to work by generating correct golden values for different
+  combinations of options
+
+- [ ] try using some of the retrie apparatus
+
+- [ ] refactor the much more sophisticated https://github.com/ddssff/refact-global-hse
+
+
