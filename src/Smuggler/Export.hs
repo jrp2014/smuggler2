@@ -1,6 +1,6 @@
 module Smuggler.Export (addExplicitExports) where
 
-import Avail (AvailInfo, availNamesWithSelectors)
+import Avail (Avails, availNamesWithSelectors)
 import Control.Monad (guard)
 import Data.Maybe (isNothing)
 import GHC (GenLocated (L), HsModule (hsmodExports), LIE, Located, Name, unLoc)
@@ -22,8 +22,8 @@ import Smuggler.Options (ExportAction (..))
 addExplicitExports ::
   Monad m =>
   ExportAction ->
-  -- | The exports to be added
-  [AvailInfo] ->
+  -- | The list of exports to be added
+  Avails ->
   -- | target module
   Located (HsModule GhcPs) ->
   TransformT m (Located (HsModule GhcPs))
@@ -63,5 +63,5 @@ addExplicitExports action exports t@(L astLoc hsMod) =
 
 -- | Produces all names from the availability information (including overloaded selectors)
 --   To exclude overloaded selector use availNames
-mkNamesFromAvailInfos :: [AvailInfo] -> [Name]
+mkNamesFromAvailInfos :: Avails -> [Name]
 mkNamesFromAvailInfos = concatMap availNamesWithSelectors

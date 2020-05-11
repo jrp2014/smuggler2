@@ -178,8 +178,12 @@ syntax used to replace the existing export list, if any.
 
 ## Other projects
 
-- the [original version](https://hackage.haskell.org/package/smuggler) of `smuggler`
+- the original version of [`smuggler`](https://hackage.haskell.org/package/smuggler) on which this one is based
 - `retrie` a [code modding tool](https://hackage.haskell.org/package/retrie)
   that works with GHC 8.10.1
 - `refact-global-hse` an ambitious [import refactoring tool](https://github.com/ddssff/refact-global-hse).
   This uses `haskell-src-exts` rather than `ghc-exactprint` and so may not work with current versions of GHC.
+- These blog posts contain some fragments on the topic of using `ghc-exactprint` to manipulate import lists
+  [Terser import declarations](https://www.machinesung.com/scribbles/terser-import-declarations.html) and
+  [GHC API](https://www.machinesung.com/scribbles/ghc-api.html) (The site
+  doesn't always seem to be up.)
