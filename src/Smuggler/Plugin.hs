@@ -92,14 +92,14 @@ smugglerPlugin clopts modSummary tcEnv = do
             Right (annsImpMod, L _ impMod) -> do
 
               let (astHsMod', (annsHsMod', locIndex), ilog) = runTransform annsHsMod $ do
+                  {-
                     minImports <- graftT annsImpMod (hsmodImports impMod)
                     -- nudge down the imports list onto a new line
                     unless (null minImports) $ setEntryDPT (head minImports) (DP (2, 0))
                     return $ L astHsModLoc (hsMod {hsmodImports = minImports})
 
-{-
-                    replaceImports (importAction options) annsImpMod (hsmodImports impMod) astHsMod
 -}
+                    replaceImports (importAction options) annsImpMod (hsmodImports impMod) astHsMod
 
               liftIO $ putStrLn $ "Imports transformed " ++ unlines ilog
 

@@ -23,7 +23,7 @@ replaceImports action anns minImports t@(L l m) =
   case action of
     NoImportProcessing -> return t
     _ -> do
-      -- nudge down the imports list onto a new line
-      unless (null minImports) $ setEntryDPT (head minImports) (DP (2, 0))
       imps <- graftT anns minImports
+      -- nudge down the imports list onto a new line
+      unless (null imps) $ setEntryDPT (head imps) (DP (2, 0))
       return $ L l m {hsmodImports = imps}

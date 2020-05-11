@@ -30,7 +30,7 @@ addExplicitExports ::
 addExplicitExports action exports t@(L astLoc hsMod) =
   case action of
     NoExportProcessing -> return t
-    AddExplicitExports ->
+    AddExplicitExports -> -- only add explicit exports if there are none
       if isNothing currentExplicitExports then result else return t
     ReplaceExports -> result
   where
@@ -54,10 +54,12 @@ addExplicitExports action exports t@(L astLoc hsMod) =
         lExportsList <- mkLoc exportsList >>= mkParen unLoc
 
         -- Graft back
-        anns <- getAnnsT
-        lExportsList' <- graftT anns lExportsList
+        -- Doesn't seeem necessary, at least if the exports don't already exist
+        --anns <- getAnnsT
+        --lExportsList' <- graftT anns lExportsList
+        --return $ L astLoc hsMod {hsmodExports = Just lExportsList'}
 
-        return $ L astLoc hsMod {hsmodExports = Just lExportsList'}
+        return $ L astLoc hsMod {hsmodExports = Just lExportsList}
 
 -- | Produces all names from the availability information (including overloaded selectors)
 --   To exclude overloaded selector use availNames
