@@ -4,8 +4,8 @@ module Smuggler.Anns
     addCommaT,
     addParensT,
     mkLoc,
-    mkParen,
-    setAnnsFor,
+    mkParenT,
+    setAnnsForT,
     swapEntryDPT
   )
 where
@@ -24,6 +24,7 @@ import RdrName (mkVarUnqual)
 import SrcLoc (GenLocated (L), Located)
 
 {-
+-- explicit version
 mkLIEVarFromNameT :: Monad m => Name -> TransformT m (Located (IE GhcPs))
 mkLIEVarFromNameT name = do
   -- Could use only one loc as it would be used on different constructors
@@ -73,26 +74,26 @@ addParensT x =
 mkLoc :: (Data e, Monad m) => e -> TransformT m (Located e)
 mkLoc e = do
   le <- L <$> uniqueSrcSpanT <*> pure e
-  setAnnsFor le []
+  setAnnsForT le []
 
-mkParen ::
+mkParenT ::
   (Data x, Monad m) =>
   (Located x -> x) ->
   Located x ->
   TransformT m (Located x)
-mkParen k e = do
+mkParenT k e = do
   pe <- mkLoc (k e)
   -- There may be some other way of getting gap in front of the paren?
-  _ <- setAnnsFor pe [(G GHC.AnnOpenP, DP (0, 1)), (G GHC.AnnCloseP, DP (0, 1))]
+  _ <- setAnnsForT pe [(G GHC.AnnOpenP, DP (0, 1)), (G GHC.AnnCloseP, DP (0, 1))]
   swapEntryDPT e pe
   return pe
 
-setAnnsFor ::
+setAnnsForT ::
   (Data e, Monad m) =>
   Located e ->
   [(KeywordId, DeltaPos)] ->
   TransformT m (Located e)
-setAnnsFor e anns = modifyAnnsT (Map.alter f (mkAnnKey e)) >> return e
+setAnnsForT e anns = modifyAnnsT (Map.alter f (mkAnnKey e)) >> return e
   where
     f Nothing = Just annNone {annsDP = anns}
     f (Just a) =
