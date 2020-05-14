@@ -2,7 +2,6 @@ module Smuggler.Anns
   ( mkLIEVarFromNameT,
     addExportDeclAnnT,
     addCommaT,
-    addParensT,
     mkLoc,
     mkParenT,
     setAnnsForT,
@@ -51,20 +50,24 @@ mkLIEVarFromNameT name = do
   liename <- mkLoc (IEName lname)
   mkLoc (IEVar noExt liename)
 
+-- 
 addExportDeclAnnT :: Monad m => Located (IE GhcPs) -> TransformT m ()
 addExportDeclAnnT (L _ (IEVar _ (L _ (IEName x)))) =
   addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
 
+-- mkParentT is used instead
 addCommaT :: Monad m => Located (IE GhcPs) -> TransformT m ()
 addCommaT x = addSimpleAnnT x (DP (0, 0)) [(G AnnComma, DP (0, 0))]
 
--- TODO: consider using mkParen
+{-
+-- add an opening+closing parenthesis annotation.  mkParenT is used instead
 addParensT :: Monad m => Located [Located (IE GhcPs)] -> TransformT m ()
 addParensT x =
   addSimpleAnnT
     x
     (DP (0, 1))
     [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 1))]
+-}
 
 -------------------------------------------------------------------------------
 -- From retrie
@@ -76,6 +79,7 @@ mkLoc e = do
   le <- L <$> uniqueSrcSpanT <*> pure e
   setAnnsForT le []
 
+-- | Add an open and close paren annotation to a located thing
 mkParenT ::
   (Data x, Monad m) =>
   (Located x -> x) ->
