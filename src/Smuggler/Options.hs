@@ -40,4 +40,4 @@ parseCommandLineOptions = foldl' parseCommandLineOption defaultOptions
       "noexportprocessing" -> opts {exportAction = NoExportProcessing}
       "addexplicitexports" -> opts {exportAction = AddExplicitExports}
       "replaceexports" -> opts {exportAction = ReplaceExports}
-      extension -> opts {newExtension = Just extension}
+      _ -> opts {newExtension = Just clo}

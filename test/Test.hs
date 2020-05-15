@@ -2,20 +2,15 @@
 
 module Main where
 
-import Control.Monad (forM, mapM, when)
-import Control.Monad.IO.Class (liftIO)
-import Data.List (intercalate, isPrefixOf)
-import Data.Maybe (fromMaybe)
+import Data.Maybe ( fromMaybe )
 import Smuggler.Options
-import System.Exit
-import System.FilePath
-import System.IO
-import System.Process.Typed
-import Test.Tasty
-import Test.Tasty.Golden
+    ( ExportAction(..), ImportAction(..), Options(..) )
+import System.FilePath ( replaceExtension, takeBaseName )
+import System.Process.Typed ( proc, runProcess_, ProcessConfig )
+import Test.Tasty ( defaultMain, testGroup, TestTree )
+import Test.Tasty.Golden ( findByExtension, goldenVsFileDiff )
 
---
-
+-- | Combinations of import and export action options to be tested
 optionsList :: [Options]
 optionsList =
   [ mkOptions PreserveInstanceImports NoExportProcessing,
@@ -69,7 +64,7 @@ compile testcase opts = do
 -- | Produce a list of command line arguments for ghc from Options
 mkArgs :: Options -> [String]
 mkArgs opts =
-  ["exec", "--", "ghc", "-fno-code", "-fplugin=Smuggler.Plugin"]
+  ["exec", "--", "ghc", "-fno-code", "-package smuggler", "-fplugin=Smuggler.Plugin"]
     ++ map
       ("-fplugin-opt=Smuggler.Plugin:" ++)
       ( let p = [show (importAction opts), show (exportAction opts)]

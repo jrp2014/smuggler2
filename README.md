@@ -22,7 +22,8 @@ Haskell Source Plugin which removes unused imports and adds explicit exports aut
 ## How to use
 
 Add `smuggler` to the dependencies of your project. Then add the following
-compiler options:
+compiler options to your build configuration (eg, to `ghc-options` in your
+`.cabal` file):
 
 ```
 -fplugin=Smuggler.Plugin
@@ -43,7 +44,7 @@ The Plugin has serveral (case-inseneitive) options:
   At present, a typeclass and its class methods are exported individually. You may want to
   replace those exports with an abbreviation such as `C(..)`.
 - `ReplaceExports` - replace any existing module export list with one containing all
-  available exports (which you can, of course, then prune to your requirements).
+  available exports (which, again, you can, of course, then prune to your requirements).
 
 Any other option value is used to generate a source file with the option value used as
 a new extension rather than replacing the original file. For example,
@@ -108,6 +109,9 @@ To build with debugging:
 cabal bulid -fdebug
 ```
 
+Curently this just adds an `-fdump-minimal-imports` parameter to GHC
+compilation.
+
 #### Stack: How to build?
 
 ```shell
@@ -116,15 +120,19 @@ stack build
 
 ### Run tests
 
-There are a couple of test suites that differ only by the `smuggler` options
-used. Do not run `cabal test` on its own, as it will run test suites in
-parallel, which will lead to strange results, as they will overwrite each
-others' intermediate artefacts.
-
+There is a `tasty-golden`-based test suite that can be run by
 ```shell
 cabal test smuggler-test --enable-tests
-cabal test smuggler-test-maximal --enable-tests
 ```
+
+Further help can be found by
+```shell
+cabal run smuggler-test -- --help
+```
+
+It is sometimes necessary to run `cabal clean` before running tests to ensure
+that old artefacts do not lead to misleading results.
+
 
 ## Implementation approach
 
