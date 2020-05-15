@@ -89,52 +89,44 @@ executable play-smuggler
 common common-tests
   import:         common-options
   hs-source-dirs: test
-  other-modules:
-    Test.BoolBoolUnused
-    Test.BoolBoolUsed
-    Test.BoolPartlyUsedFirst
-    Test.BoolPartlyUsedLast
-    Test.ConstructorsUnused
-    Test.Dummy
-    Test.ExportExplicit
-    Test.ExportImplicit
-    Test.ImplicitImportUnused
-    Test.ImplicitImportUsed
-    Test.ImportEmpty
-    Test.MultilineUnused
-    Test.TypeConstructorUnused
-    Test.TypeConstructorUnusedComma
-    Test.TypeConstructorUsed
-    Test.TypeUnused
-    Test.TypeUsed
-    Test.WildcardUnused
+--  other-modules:
+--    Test.BoolBoolUnused
+--    Test.BoolBoolUsed
+--    Test.BoolPartlyUsedFirst
+--    Test.BoolPartlyUsedLast
+--    Test.ConstructorsUnused
+--    Test.Dummy
+--    Test.ExportExplicit
+--    Test.ExportImplicit
+--    Test.ImplicitImportUnused
+--    Test.ImplicitImportUsed
+--    Test.ImportEmpty
+--    Test.MultilineUnused
+--    Test.TypeConstructorUnused
+--    Test.TypeConstructorUnusedComma
+--    Test.TypeConstructorUsed
+--    Test.TypeUnused
+--    Test.TypeUsed
+--    Test.WildcardUnused
 
   build-depends:
-    , ansi-terminal
-    , directory
     , filepath
+    , tasty
+    , tasty-golden
+    , typed-process
     , smuggler
 
   ghc-options:
     -threaded -rtsopts -with-rtsopts=-N -fno-warn-unused-imports
-    -fno-warn-missing-signatures -fplugin=Smuggler.Plugin
-    -fplugin-opt=Smuggler.Plugin:test
+    -fno-warn-missing-signatures
+--    -fplugin=Smuggler.Plugin
+--    -fplugin-opt=Smuggler.Plugin:test
 
 test-suite smuggler-test
   import:      common-tests
   type:        exitcode-stdio-1.0
   main-is:     Test.hs
-  ghc-options: -fplugin-opt=Smuggler.Plugin:test
+--     ghc-options: -fplugin-opt=Smuggler.Plugin:test
 --   -fplugin-opt=Smuggler.Plugin:NoExportProcessing
 --   -fplugin-opt=Smuggler.Plugin:NoImportProcessing
 --   -fplugin-opt=Smuggler.Plugin:MinimiseImports
-
-test-suite smuggler-test-minimal-imports
-  import:      common-tests
-  type:        exitcode-stdio-1.0
-  main-is:     Test.hs
-  ghc-options:
-    -fplugin-opt=Smuggler.Plugin:test
-    -fplugin-opt=Smuggler.Plugin:MinimiseImports
-
---    -fplugin-opt=Smuggler.Plugin:ReplaceExports

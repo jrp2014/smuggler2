@@ -11,16 +11,17 @@ import Data.List (foldl')
 import Plugins (CommandLineOption)
 
 data ImportAction = NoImportProcessing | PreserveInstanceImports | MinimiseImports
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data ExportAction = NoExportProcessing | AddExplicitExports | ReplaceExports
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data Options = Options
   { importAction :: ImportAction,
     exportAction :: ExportAction,
     newExtension :: Maybe String
   }
+  deriving (Show)
 
 -- | The default is to retain instance-only imports (eg, Data.List () )
 -- and add explict exports only if they are not already present

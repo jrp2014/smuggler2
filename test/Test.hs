@@ -1,68 +1,78 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
-import Control.Monad (when)
-import Data.Foldable (for_)
+import Control.Monad (forM, mapM, when)
+import Control.Monad.IO.Class (liftIO)
 import Data.List (intercalate, isPrefixOf)
-import System.Console.ANSI (Color (..), ColorIntensity (Dull), ConsoleIntensity (BoldIntensity),
-                            ConsoleLayer (Foreground), SGR (..), setSGR)
-import System.Directory (doesDirectoryExist, listDirectory, removeDirectoryRecursive, removeFile)
-import System.Exit (exitFailure)
-import System.FilePath (isExtensionOf, splitExtension, (<.>), (</>))
+import Data.Maybe (fromMaybe)
+import Smuggler.Options
+import System.Exit
+import System.FilePath
+import System.IO
+import System.Process.Typed
+import Test.Tasty
+import Test.Tasty.Golden
+
+--
+
+optionsList :: [Options]
+optionsList =
+  [ Options PreserveInstanceImports NoExportProcessing (Just "PreserveInstanceImports"),
+    Options MinimiseImports NoExportProcessing (Just "MinimiseImports"),
+    Options NoImportProcessing AddExplicitExports (Just "AddExplicitExports"),
+    Options NoImportProcessing ReplaceExports (Just "ReplaceExports"),
+    Options MinimiseImports ReplaceExports (Just "MinimiseImportsReplaceExports"),
+    Options NoImportProcessing NoExportProcessing (Just "noop")
+  ]
+
+testOptions :: [Options] -> IO TestTree
+testOptions opts =
+  testGroup
+    "All"
+    <$> sequence (goldenTests <$> opts)
+
+goldenTests :: Options -> IO TestTree
+goldenTests opts = do
+  testFiles <- findByExtension [".hs"] "test/tests"
+  return $
+    testGroup
+      ("With " ++ show opts)
+      [ goldenVsFileDiff
+          (takeBaseName testFile) -- test name
+          (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
+          (replaceExtension testFile (mkExt opts)) -- golden file
+          (replaceExtension testFile (fromMaybe "NoNewExtension" (newExtension opts))) -- output file
+          (compile testFile opts)
+        | testFile <- testFiles
+      ]
 
 main :: IO ()
-main = do
-    files <- map ("test/Test" </>) <$> listDirectory "test/Test/"
-    let testFiles = filter ("test" `isExtensionOf`) files
-    -- compare outputs of .test and .golden files
-    result <- and <$> traverse compareWithGolden testFiles
+main = defaultMain =<< testOptions optionsList
 
-    -- clean up all .test files
-    putStrLn "Cleaning tests"
-    for_ testFiles removeFile
-
-    -- TODO: redundant?
-    -- clean up .smuggler/ cache directory
-    cacheDirExists <- doesDirectoryExist ".smuggler"
-    when cacheDirExists $ do
-      putStrLn "Cleaning smuggler cache"
-      removeDirectoryRecursive ".smuggler"
-
-    if result
-        then successMessage "Success"
-        else failureMessage "Some tests failed" >> exitFailure
+compile :: FilePath -> Options -> IO ()
+compile testcase opts = do
+  print ghcArgs
+  runProcess_ ghcConfig
   where
-    compareWithGolden :: FilePath -> IO Bool
-    compareWithGolden f = do
-        let (name, _) = splitExtension f
-        goldenContent <- readFile $ name <.> "golden"
-        testContent   <- readFile f
-        if goldenContent == testContent
-          then pure True
-          else do
-            failureMessage $ "\nTest " ++ name ++ " failed:"
-            False <$ outputFailure testContent goldenContent
+    ghcConfig :: ProcessConfig () () ()
+    ghcConfig = proc ghcCmd ghcArgs
+    ghcCmd :: FilePath
+    ghcCmd = "ghc"
+    ghcArgs :: [String]
+    ghcArgs = mkArgs opts ++ [testcase]
 
-    outputFailure :: String -> String -> IO ()
-    outputFailure given expected = do
-      boldMessage "Expected:"
-      putStrLn expected
-      boldMessage "But got:"
-      putStrLn given
+-- | Produce a list of command line arguments for ghc from Options
+mkArgs :: Options -> [String]
+mkArgs opts =
+  ["-fno-code", "-fplugin=Smuggler.Plugin"]
+    ++ map
+      ("-fplugin-opt=Smuggler.Plugin:" ++)
+      ( let p = [show (importAction opts), show (exportAction opts)]
+         in case newExtension opts of
+              Nothing -> p
+              Just e -> e : p
+      )
 
-successCode, failureCode, resetCode :: [SGR]
-successCode = [SetColor Foreground Dull Green]
-failureCode = [SetColor Foreground Dull Red]
-boldCode = [SetConsoleIntensity BoldIntensity]
-resetCode = [Reset]
-
-successMessage, failureMessage :: String -> IO ()
-successMessage m = setSGR successCode >> putStrLn m >> setSGR resetCode
-failureMessage m = setSGR failureCode >> putStrLn m >> setSGR resetCode
-boldMessage m = setSGR boldCode >> putStrLn m >> setSGR resetCode
-
-importStatementsOnly :: String -> String
-importStatementsOnly
-  = intercalate "\n"
-  . map ("- " ++ )
-  . filter ("import " `isPrefixOf`)
-  . lines
+mkExt :: Options -> String
+mkExt opts = '.' : (show (importAction opts) ++ show (exportAction opts) ++ fromMaybe "" (newExtension opts))
