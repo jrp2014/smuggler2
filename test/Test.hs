@@ -18,13 +18,16 @@ import Test.Tasty.Golden
 
 optionsList :: [Options]
 optionsList =
-  [ Options PreserveInstanceImports NoExportProcessing (Just "PreserveInstanceImports"),
-    Options MinimiseImports NoExportProcessing (Just "MinimiseImports"),
-    Options NoImportProcessing AddExplicitExports (Just "AddExplicitExports"),
-    Options NoImportProcessing ReplaceExports (Just "ReplaceExports"),
-    Options MinimiseImports ReplaceExports (Just "MinimiseImportsReplaceExports"),
-    Options NoImportProcessing NoExportProcessing (Just "noop")
+  [ mkOptions PreserveInstanceImports NoExportProcessing,
+    mkOptions MinimiseImports NoExportProcessing,
+    mkOptions NoImportProcessing AddExplicitExports,
+    mkOptions NoImportProcessing ReplaceExports,
+    mkOptions MinimiseImports ReplaceExports,
+    mkOptions NoImportProcessing NoExportProcessing
   ]
+  where
+    mkOptions :: ImportAction -> ExportAction -> Options
+    mkOptions i e = Options i e (Just (show i ++ show e))
 
 testOptions :: [Options] -> IO TestTree
 testOptions opts =
@@ -37,11 +40,11 @@ goldenTests opts = do
   testFiles <- findByExtension [".hs"] "test/tests"
   return $
     testGroup
-      ("With " ++ show opts)
+      (fromMaybe "NoNewExtension" (newExtension opts))
       [ goldenVsFileDiff
           (takeBaseName testFile) -- test name
           (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
-          (replaceExtension testFile (mkExt opts)) -- golden file
+          (replaceExtension testFile (fromMaybe "golden" (newExtension opts)) ++ "-golden") -- golden file
           (replaceExtension testFile (fromMaybe "NoNewExtension" (newExtension opts))) -- output file
           (compile testFile opts)
         | testFile <- testFiles
@@ -50,22 +53,23 @@ goldenTests opts = do
 main :: IO ()
 main = defaultMain =<< testOptions optionsList
 
+-- | Use `cabal exec` to run the compilation, so that the smuggler plugin is
+-- picked up from the local database.  GHC alone uses the global one.
 compile :: FilePath -> Options -> IO ()
 compile testcase opts = do
-  print ghcArgs
-  runProcess_ ghcConfig
+  runProcess_ cabalConfig
   where
-    ghcConfig :: ProcessConfig () () ()
-    ghcConfig = proc ghcCmd ghcArgs
-    ghcCmd :: FilePath
-    ghcCmd = "ghc"
-    ghcArgs :: [String]
-    ghcArgs = mkArgs opts ++ [testcase]
+    cabalConfig :: ProcessConfig () () ()
+    cabalConfig = proc cabalCmd cabalArgs
+    cabalCmd :: FilePath
+    cabalCmd = "cabal"
+    cabalArgs :: [String]
+    cabalArgs = mkArgs opts ++ [testcase]
 
 -- | Produce a list of command line arguments for ghc from Options
 mkArgs :: Options -> [String]
 mkArgs opts =
-  ["-fno-code", "-fplugin=Smuggler.Plugin"]
+  ["exec", "--", "ghc", "-fno-code", "-fplugin=Smuggler.Plugin"]
     ++ map
       ("-fplugin-opt=Smuggler.Plugin:" ++)
       ( let p = [show (importAction opts), show (exportAction opts)]
@@ -73,6 +77,3 @@ mkArgs opts =
               Nothing -> p
               Just e -> e : p
       )
-
-mkExt :: Options -> String
-mkExt opts = '.' : (show (importAction opts) ++ show (exportAction opts) ++ fromMaybe "" (newExtension opts))

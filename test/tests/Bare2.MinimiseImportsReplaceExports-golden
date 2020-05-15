@@ -1,3 +1,4 @@
-module Bare2 where
+module Bare2 (
+  main ) where
 
 main = putStrLn "Hello, World"
