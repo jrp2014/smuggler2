@@ -142,7 +142,7 @@ that old artefacts do not lead to misleading results.
 `smuggler` uses the `ghc-exactprint`
 [library](https://hackage.haskell.org/package/ghc-exactprint) to modiify the
 source code. The documentation for the library is fairly spartan, and the
-library is not widely used, so the use here may be sub-optimal.
+library is not widely used, so the use here can, no doubt, be optimised.
 
 The library is needed because the annotated AST that GHC generates does not have enough
 information to reconstitute the original source. For example, certain keywords,
@@ -154,12 +154,12 @@ To make manipulation of GHC's AST and `ghc-exactprint`'s `Anns` easier,
 `ghc-exactprint` provides a set of Transform functions. These are intended to facilitate
 making changes to the AST and adjusting the `Anns` to suit the changes.
 
-> These functions are [said to be under active development](https://hackage.haskell.org/package/ghc-exactprint-0.6.3/docs/Language-Haskell-GHC-ExactPrint-Transform.html).
-> It is not obvious how they are intended to be used or composed. The
+> These functions are [said to be under heavy development](https://hackage.haskell.org/package/ghc-exactprint-0.6.3/docs/Language-Haskell-GHC-ExactPrint-Transform.html).
+> It is not entirely obvious how they are intended to be used or composed. The
 > approach provided by [`retrie`](https://hackage.haskell.org/package/retrie)
 > wraps an AST and `Anns` into a single type that seems to make AST
 > transformations easier to compose and reduces the risk of the `Anns` and AST getting
-> out of sync as it is being transformed, something with which the type system doesnt'
+> out of sync as it is being transformed, something with which the type system doesn't
 > help you since the `Anns` are stored as a `Map`.
 
 ### Imports

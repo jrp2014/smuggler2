@@ -4,7 +4,6 @@ version:         0.3.0.0
 synopsis:        GHC Source Plugin that helps to manage imports
 description:
   == Usage
-
   Add @smuggler@ to the dependencies of your project.
   .
   Then add the following to ghc-options: @-fplugin=Smuggler.Plugin@
@@ -21,6 +20,7 @@ build-type:      Simple
 extra-doc-files:
   README.md
   CHANGELOG.md
+  TODO.md
 
 tested-with:     GHC ==8.10.1
 
@@ -29,20 +29,31 @@ flag debug
   default:     False
   manual:      True
 
+flag threaded
+  description: Build with support for multithreaded execution
+  default:     True
+  manual:      True
+
 source-repository head
   type:     git
-  location: git@github.com:kowainik/smuggler.git
+  location: https://github.com/jrp2014/smuggler
 
 common common-options
-  build-depends:      base >=4.12
+  -- test these bounds
+  build-depends:      base >=4.12 && <4.15
+
+  -- -O2 gives a nearly 10% speed improvement
   ghc-options:
-    -- -O2 gives a nearly 10% speed improvement
-    -O2 -Wall -Wextra -Wincomplete-uni-patterns -Wincomplete-record-updates
-    -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
-    -Wunused-packages -fwrite-ide-info
+    -O2 -Wall -Wextra -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wcompat -Widentities
+    -Wredundant-constraints -fhide-source-paths -Wunused-packages
+
+  if impl(ghc >=8.10.0)
+    ghc-options: -fwrite-ide-info
 
   if flag(debug)
     ghc-options: -ddump-minimal-imports
+    cpp-options: -DDEBUG
 
   default-language:   Haskell2010
 
@@ -58,6 +69,12 @@ common common-options
     StandaloneDeriving
     TypeApplications
 
+common executable-options
+  ghc-options: -rtsopts
+
+  if flag(threaded)
+    ghc-options: -threaded -with-rtsopts=-N
+
 library
   import:          common-options
   hs-source-dirs:  src
@@ -68,12 +85,12 @@ library
     Smuggler.Plugin
 
   build-depends:
-    , containers      >=0.5   && <0.7
-    , directory
-    , filepath        ^>=1.4
-    , ghc             >=8.8.0
-    , ghc-exactprint  ^>=0.6
-    , syb
+    , containers      >=0.5
+    , directory       >=1.2
+    , filepath        >=1.4
+    , ghc             >=8.6.5
+    , ghc-exactprint  >=0.6
+    , syb             >=0.5
 
   if flag(debug)
     build-depends: text
@@ -81,17 +98,18 @@ library
 -- Currently doesn't do anything much
 executable play-smuggler
   import:         common-options
+  import:         executable-options
   hs-source-dirs: app
   main-is:        Main.hs
-  ghc-options:    -threaded -rtsopts -with-rtsopts=-N
 
   if flag(debug)
     ghc-options: -fplugin=Smuggler.Plugin
 
   build-depends:  smuggler
 
-common common-tests
+test-suite smuggler-test
   import:         common-options
+  type:           exitcode-stdio-1.0
   hs-source-dirs: test
   build-depends:
     , filepath
@@ -100,9 +118,8 @@ common common-tests
     , tasty-golden
     , typed-process
 
-  ghc-options:    -threaded -rtsopts -with-rtsopts=-N
+  main-is:        Test.hs
+  ghc-options:    -rtsopts
 
-test-suite smuggler-test
-  import:  common-tests
-  type:    exitcode-stdio-1.0
-  main-is: Test.hs
+  if flag(threaded)
+    ghc-options: -threaded -with-rtsopts=-N
