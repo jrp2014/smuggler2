@@ -2,13 +2,16 @@
 
 module Main where
 
-import Data.Maybe ( fromMaybe )
+import Data.Maybe (fromMaybe)
 import Smuggler.Options
-    ( ExportAction(..), ImportAction(..), Options(..) )
-import System.FilePath ( replaceExtension, takeBaseName )
-import System.Process.Typed ( proc, runProcess_, ProcessConfig )
-import Test.Tasty ( defaultMain, testGroup, TestTree )
-import Test.Tasty.Golden ( findByExtension, goldenVsFileDiff )
+  ( ExportAction (..),
+    ImportAction (..),
+    Options (..),
+  )
+import System.FilePath ((-<.>), takeBaseName)
+import System.Process.Typed (ProcessConfig, proc, runProcess_)
+import Test.Tasty (TestTree, defaultMain, testGroup)
+import Test.Tasty.Golden (findByExtension, goldenVsFileDiff)
 
 -- | Combinations of import and export action options to be tested
 optionsList :: [Options]
@@ -26,9 +29,7 @@ optionsList =
 
 testOptions :: [Options] -> IO TestTree
 testOptions opts =
-  testGroup
-    "All"
-    <$> sequence (goldenTests <$> opts)
+  testGroup "All" <$> sequenceA (goldenTests <$> opts)
 
 goldenTests :: Options -> IO TestTree
 goldenTests opts = do
@@ -38,9 +39,10 @@ goldenTests opts = do
       (fromMaybe "NoNewExtension" (newExtension opts))
       [ goldenVsFileDiff
           (takeBaseName testFile) -- test name
-          (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
-          (replaceExtension testFile (fromMaybe "golden" (newExtension opts)) ++ "-golden") -- golden file
-          (replaceExtension testFile (fromMaybe "NoNewExtension" (newExtension opts))) -- output file
+          (\ref new -> ["git", "diff", ref, new]) -- how to display diffs
+            -- (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
+          (testFile -<.> fromMaybe "golden" (newExtension opts) ++ "-golden") -- golden file
+          (testFile -<.> fromMaybe "NoNewExtension" (newExtension opts)) -- output file
           (compile testFile opts)
         | testFile <- testFiles
       ]
@@ -49,26 +51,26 @@ main :: IO ()
 main = defaultMain =<< testOptions optionsList
 
 -- | Use `cabal exec` to run the compilation, so that the smuggler plugin is
--- picked up from the local database.  GHC alone uses the global one.
+-- picked up from the local database.  GHC alone would use the global one.
 compile :: FilePath -> Options -> IO ()
-compile testcase opts = do
-  runProcess_ cabalConfig
+compile testcase opts = runProcess_ cabalConfig
   where
     cabalConfig :: ProcessConfig () () ()
     cabalConfig = proc cabalCmd cabalArgs
+
     cabalCmd :: FilePath
     cabalCmd = "cabal"
-    cabalArgs :: [String]
-    cabalArgs = mkArgs opts ++ [testcase]
 
--- | Produce a list of command line arguments for ghc from Options
-mkArgs :: Options -> [String]
-mkArgs opts =
-  ["exec", "--", "ghc", "-fno-code", "-package smuggler", "-fplugin=Smuggler.Plugin"]
-    ++ map
-      ("-fplugin-opt=Smuggler.Plugin:" ++)
-      ( let p = [show (importAction opts), show (exportAction opts)]
-         in case newExtension opts of
-              Nothing -> p
-              Just e -> e : p
-      )
+    cabalArgs :: [String]
+    cabalArgs =
+      -- no sure why it is necessary to mention the smuggler package explictly,
+      -- but it appears to be hidden otherwise
+      ["exec", "--", "ghc", "-package smuggler", "-fno-code", "-fplugin=Smuggler.Plugin"]
+        ++ map
+          ("-fplugin-opt=Smuggler.Plugin:" ++)
+          ( let p = [show (importAction opts), show (exportAction opts)]
+             in case newExtension opts of
+                  Nothing -> p
+                  Just e -> e : p
+          )
+        ++ [testcase]

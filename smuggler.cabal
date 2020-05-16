@@ -1,6 +1,6 @@
 cabal-version:   3.0
 name:            smuggler
-version:         0.2.1.0
+version:         0.3.0.0
 synopsis:        GHC Source Plugin that helps to manage imports
 description:
   == Usage
@@ -76,6 +76,7 @@ library
   if flag(debug)
     build-depends: text
 
+-- Currently doesn't do anything much
 executable play-smuggler
   import:         common-options
   hs-source-dirs: app

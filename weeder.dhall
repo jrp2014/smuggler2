@@ -1,1 +1,1 @@
-{ roots = [ "^Smuggler.Plugin.plugin$" ], type-class-roots = True }
+{ roots = [ "^Smuggler.Plugin.plugin$", "^Main.main$" ], type-class-roots = True }
