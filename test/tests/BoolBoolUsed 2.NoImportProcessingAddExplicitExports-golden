@@ -1,6 +1,0 @@
-module Test.BoolBoolUsed (
-  func ) where
-
-import Data.Bool (bool)
-
-func = bool

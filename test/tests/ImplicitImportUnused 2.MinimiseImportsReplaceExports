@@ -1,9 +1,0 @@
-module Test.ImplicitImportUnused (
-  bar,
-  foo ) where
-
-import Data.Maybe ( isJust )
-
-foo = isJust
-
-bar = 27

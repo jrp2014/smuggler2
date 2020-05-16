@@ -1,5 +1,0 @@
-module Test.TypeConstructorUsed where
-
-import Data.Bool ()
-
-true = True

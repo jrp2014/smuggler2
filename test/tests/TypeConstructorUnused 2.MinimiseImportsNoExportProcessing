@@ -1,3 +1,0 @@
-module Test.TypeConstructorUnused where
-
-true = True

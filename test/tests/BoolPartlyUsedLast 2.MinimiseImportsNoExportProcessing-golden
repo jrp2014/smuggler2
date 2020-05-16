@@ -1,3 +1,0 @@
-module Test.BoolPartlyUsedLast where
-
-foo = not

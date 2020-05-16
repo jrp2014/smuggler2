@@ -1,6 +1,0 @@
-module Test.TypeConstructorUnused (
-  true ) where
-
-import Data.Bool (Bool (False, True))
-
-true = True
