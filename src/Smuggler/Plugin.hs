@@ -5,7 +5,7 @@ module Smuggler.Plugin
   )
 where
 
-import Avail (Avails, availNamesWithSelectors)
+import Avail (AvailInfo (AvailTC), Avails, availNamesWithSelectors)
 import Control.Monad (unless, when)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Maybe (fromMaybe, isNothing)
@@ -43,6 +43,7 @@ import Plugins
     defaultPlugin,
     purePlugin,
   )
+import RdrName (GlobalRdrEnv, globalRdrEnvElts, gresToAvailInfo, isLocalGRE)
 import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports)
 import Smuggler.Anns (addCommaT, addExportDeclAnnT, mkLIEVarFromNameT, mkLoc, mkParenT)
 import Smuggler.Options
@@ -56,7 +57,7 @@ import StringBuffer (StringBuffer (StringBuffer), lexemeToString)
 import System.Directory (removeFile)
 import System.FilePath ((-<.>), (</>))
 import System.IO (IOMode (WriteMode), withFile)
-import TcRnTypes (RnM, TcGblEnv (tcg_exports, tcg_rn_imports, tcg_used_gres), TcM)
+import TcRnTypes (RnM, TcGblEnv (tcg_rdr_env, tcg_exports, tcg_rn_imports, tcg_used_gres), TcM)
 
 plugin :: Plugin
 plugin =
@@ -117,9 +118,12 @@ smugglerPlugin clopts modSummary tcEnv = do
               -- What is exported by the module
               -- TODO: prseumably this is not the same as what is exportable,
               -- which means that the rewrite exports action will not do much
-              let exports = tcg_exports tcEnv
+              let exports =
+                    if exportAction options == ReplaceExports
+                      then exportable $ tcg_rdr_env tcEnv
+                      else tcg_exports tcEnv
 
-              -- Generate a new ast and annotations for it
+              -- Bringing it all together: generate a new ast and annotations for it
               let (astHsMod', (annsHsMod', _locIndex), _log) =
                     runTransform annsHsMod $
                       replaceImports annsImpMod minImports astHsMod
@@ -133,82 +137,96 @@ smugglerPlugin clopts modSummary tcEnv = do
 
               -- delete the
               removeFile minImpFilePath
+          where
+            -- A cut down veersion of
+            exportable :: GlobalRdrEnv -> [AvailInfo]
+            exportable rdr_env =
+              -- The same as (module M) where M is the current module name,
+              -- so that's how we handle it, except we also export the data amily
+              -- when a data instance is exported.
+              map fix_faminst . gresToAvailInfo
+                . filter isLocalGRE
+                . globalRdrEnvElts
+                $ rdr_env
+              where
+                fix_faminst (AvailTC n ns flds) =
+                  let new_ns =
+                        case ns of
+                          [] -> [n]
+                          (p : _) -> if p == n then ns else n : ns
+                   in AvailTC n new_ns flds
+                fix_faminst avail = avail
 
-         where
+            --  Replace a target module's imports
+            --  See <https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs>
+            replaceImports ::
+              Monad m =>
+              -- | annotations for the replacement imports
+              Anns ->
+              -- | the replacement imports
+              [LImportDecl GhcPs] ->
+              -- | target module
+              ParsedSource ->
+              TransformT m ParsedSource
+            replaceImports anns minImports t@(L l m) =
+              case action of
+                NoImportProcessing -> return t
+                _ -> do
+                  imps <- graftT anns minImports
+                  -- nudge down the imports list onto a new line
+                  unless (null imps) $ setEntryDPT (head imps) (DP (2, 0))
+                  return $ L l m {hsmodImports = imps}
+              where
+                action :: ImportAction
+                action = importAction options
 
-          --  Replace a target module's imports
-          --  See <https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs>
-          replaceImports ::
-            Monad m =>
-            -- | annotations for the replacement imports
-            Anns ->
-            -- | the replacement imports
-            [LImportDecl GhcPs] ->
-            -- | target module
-            ParsedSource ->
-            TransformT m ParsedSource
-          replaceImports anns minImports t@(L l m) =
-            case action of
-              NoImportProcessing -> return t
-              _ -> do
-                imps <- graftT anns minImports
-                -- nudge down the imports list onto a new line
-                unless (null imps) $ setEntryDPT (head imps) (DP (2, 0))
-                return $ L l m {hsmodImports = imps}
-            where
-              action :: ImportAction
-              action = importAction options
+            -- Add explict exports to the target module
+            addExplicitExports ::
+              Monad m =>
+              -- | The list of exports to be added
+              Avails ->
+              -- | target module
+              ParsedSource ->
+              TransformT m ParsedSource
+            addExplicitExports exports t@(L astLoc hsMod) =
+              case exportAction options of
+                NoExportProcessing -> return t
+                AddExplicitExports ->
+                  -- only add explicit exports if there are none
+                  -- seems to work even if there is no explict module declaration
+                  -- presumably because the annotations that we generate are just
+                  -- unused by exactPrint
+                  if isNothing currentExplicitExports then result else return t
+                ReplaceExports -> result
+              where
+                currentExplicitExports :: Maybe (Located [LIE GhcPs])
+                currentExplicitExports = hsmodExports hsMod
 
-          -- Add explict exports to the target module
-          addExplicitExports ::
-            Monad m =>
-            -- | The list of exports to be added
-            Avails ->
-            -- | target module
-            ParsedSource ->
-            TransformT m ParsedSource
-          addExplicitExports exports t@(L astLoc hsMod) =
-            case action of
-              NoExportProcessing -> return t
-              AddExplicitExports ->
-                -- only add explicit exports if there are none
-                -- seems to work even if there is no explict module declaration
-                -- presumably because the annotations that we generate are just
-                -- unused by exactPrint
-                if isNothing currentExplicitExports then result else return t
-              ReplaceExports -> result
-            where
-              action :: ExportAction
-              action = exportAction options
+                names :: [Name]
+                names = reverse $ mkNamesFromAvailInfos exports -- TODO check the ordering
 
-              currentExplicitExports :: Maybe (Located [LIE GhcPs])
-              currentExplicitExports = hsmodExports hsMod
+                -- Produces all names from the availability information (including overloaded selectors)
+                -- To exclude overloaded selector use availNames
+                mkNamesFromAvailInfos :: Avails -> [Name]
+                mkNamesFromAvailInfos = concatMap availNamesWithSelectors
 
-              names :: [Name]
-              names = reverse $ mkNamesFromAvailInfos exports -- TODO check the ordering
+                -- This does all the export replacement work
+                result :: Monad m => TransformT m ParsedSource
+                result
+                  | null names = return t
+                  | otherwise = do
+                    -- Generate the exports list
+                    exportsList <- mapM mkLIEVarFromNameT names
+                    -- add further annotations
+                    mapM_ addExportDeclAnnT exportsList
+                    mapM_ addCommaT (init exportsList)
 
-              -- Produces all names from the availability information (including overloaded selectors)
-              -- To exclude overloaded selector use availNames
-              mkNamesFromAvailInfos :: Avails -> [Name]
-              mkNamesFromAvailInfos = concatMap availNamesWithSelectors
+                    -- Add the parens
+                    lExportsList <- mkLoc exportsList >>= mkParenT unLoc
 
-              -- This does all the export replacement work
-              result :: Monad m => TransformT m ParsedSource
-              result
-                | null names = return t
-                | otherwise = do
-                  -- Generate the exports list
-                  exportsList <- mapM mkLIEVarFromNameT names
-                  -- add further annotations
-                  mapM_ addExportDeclAnnT exportsList
-                  mapM_ addCommaT (init exportsList)
-
-                  -- Add the parens
-                  lExportsList <- mkLoc exportsList >>= mkParenT unLoc
-
-                  -- No need to do any graftTing here as we have been modifying the
-                  -- annotations in the current transformation
-                  return $ L astLoc hsMod {hsmodExports = Just lExportsList}
+                    -- No need to do any graftTing here as we have been modifying the
+                    -- annotations in the current transformation
+                    return $ L astLoc hsMod {hsmodExports = Just lExportsList}
 
     -- This version of the GHC function ignores implicit imports, as the result
     -- cannot be parsed back in.  (There is an extraneous (implicit)')

@@ -13,7 +13,7 @@ import Data.Generics as SYB (Data)
 import qualified Data.Map.Strict as Map (alter, fromList, insert, lookup, toList, union)
 import Data.Maybe (fromMaybe)
 import GHC (AnnKeywordId (AnnCloseP, AnnComma, AnnOpenP, AnnVal), GhcPs, IE (IEVar),
-            IEWrappedName (IEName), Name)
+            IEWrappedName (..), Name)
 import Language.Haskell.GHC.ExactPrint (Annotation (annEntryDelta, annPriorComments, annsDP),
                                         TransformT, addSimpleAnnT, modifyAnnsT, uniqueSrcSpanT)
 import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (..), KeywordId (G), annNone, mkAnnKey,
@@ -50,10 +50,20 @@ mkLIEVarFromNameT name = do
   liename <- mkLoc (IEName lname)
   mkLoc (IEVar noExt liename)
 
--- 
+-- TODO: This works for common cases (IEVar + IEName), but doesn't handle IEThingAbs,
+-- IEThingWith, IEThingAll, IEModuleContents, IEGroup, IEDoc, IEDocNamed, XIE,
+-- in all their IEName/IEPattAern and IEType variations.  But since it is only
+-- creating a list of exportable things, perhaps that is OK.
 addExportDeclAnnT :: Monad m => Located (IE GhcPs) -> TransformT m ()
 addExportDeclAnnT (L _ (IEVar _ (L _ (IEName x)))) =
   addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
+{-
+ -- Comment this out for now, so that it breaks if there is an interesting case
+addExportDeclAnnT (L _ (IEVar _ (L _ (IEPattern x)))) =
+  addSimpleAnnT x (DP (1, 2)) [(G AnnPattern, DP (0, 0))] -- TODO:: check that AnnPattern is correct
+addExportDeclAnnT (L _ (IEVar _ (L _ (IEType x)))) =
+  addSimpleAnnT x (DP (1, 2)) [(G AnnType, DP (0, 0))] -- TODO:: check that AnnType is correct
+-}
 
 -- mkParentT is used instead
 addCommaT :: Monad m => Located (IE GhcPs) -> TransformT m ()

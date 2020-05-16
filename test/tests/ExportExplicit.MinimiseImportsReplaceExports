@@ -1,4 +1,6 @@
 module Test.ExportExplicit (
+  main,
+  andAnother,
   anotherExport,
   isExported ) where
 
