@@ -1,0 +1,13 @@
+module Test.ExportExplicit (
+  andAnother,
+  anotherExport,
+  isExported ) where
+
+isExported = (+1)
+
+anotherExport = True
+
+andAnother = 27
+
+main :: IO ()
+main = pure ()

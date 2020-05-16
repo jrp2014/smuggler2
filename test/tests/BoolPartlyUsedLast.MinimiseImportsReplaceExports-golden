@@ -1,0 +1,4 @@
+module Test.BoolPartlyUsedLast (
+  foo ) where
+
+foo = not

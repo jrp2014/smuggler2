@@ -1,0 +1,6 @@
+module Test.TypeConstructorUnusedComma (
+  false ) where
+
+import Data.Bool (Bool (False, True))
+
+false = False

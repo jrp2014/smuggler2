@@ -1,0 +1,5 @@
+module Test.Dummy (
+  main ) where
+
+main :: IO ()
+main = pure ()

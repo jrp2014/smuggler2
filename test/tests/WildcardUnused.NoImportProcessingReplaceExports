@@ -1,0 +1,6 @@
+module Test.WildcardUnused (
+  foo ) where
+
+import Data.Bool (Bool (..), not)
+
+foo = not

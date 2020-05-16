@@ -1,0 +1,3 @@
+module Test.TypeUnused where
+
+foo = not

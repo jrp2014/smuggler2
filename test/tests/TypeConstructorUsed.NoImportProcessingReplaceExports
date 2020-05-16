@@ -1,0 +1,6 @@
+module Test.TypeConstructorUsed (
+  true ) where
+
+import Data.Bool (Bool (True))
+
+true = True
