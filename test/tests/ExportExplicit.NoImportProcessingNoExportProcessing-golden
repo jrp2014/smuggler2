@@ -1,4 +1,4 @@
-module Test.ExportExplicit (isExported, anotherExport, andAnother) where
+module Test.ExportExplicit (isExported, anotherExport) where
 
 isExported = (+1)
 

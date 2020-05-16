@@ -129,6 +129,8 @@ Further help can be found by
 ```shell
 cabal run smuggler-test -- --help
 ```
+(note the extra `--`)
+
 
 It is sometimes necessary to run `cabal clean` before running tests to ensure
 that old artefacts do not lead to misleading results.
