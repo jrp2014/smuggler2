@@ -19,7 +19,7 @@ runParser dflags fileName fileContents = do
   case res of
     Left msg -> do
 #if __GLASGOW_HASKELL__ < 810
-      show msg
+      print msg
       return $ Left ()
 #else
       printBagOfErrors dflags msg
