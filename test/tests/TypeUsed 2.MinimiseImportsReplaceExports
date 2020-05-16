@@ -1,0 +1,5 @@
+module Test.TypeUsed (
+  foo ) where
+
+foo :: Bool
+foo = undefined

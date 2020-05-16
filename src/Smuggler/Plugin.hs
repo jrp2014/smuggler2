@@ -121,7 +121,7 @@ smugglerPlugin clopts modSummary tcEnv = do
               let exports =
                     if exportAction options == ReplaceExports
                       then exportable $ tcg_rdr_env tcEnv
-                      else tcg_exports tcEnv
+                      else tcg_exports tcEnv -- what is currently exported
 
               -- Bringing it all together: generate a new ast and annotations for it
               let (astHsMod', (annsHsMod', _locIndex), _log) =
@@ -135,10 +135,10 @@ smugglerPlugin clopts modSummary tcEnv = do
                 Nothing -> writeFile modulePath newContent
                 Just ext -> writeFile (modulePath -<.> ext) newContent
 
-              -- delete the
+              -- delete the GHC-generated imports file
               removeFile minImpFilePath
           where
-            -- A cut down veersion of
+            -- | A cut down version of exports_from_avail in TcRnExports
             exportable :: GlobalRdrEnv -> [AvailInfo]
             exportable rdr_env =
               -- The same as (module M) where M is the current module name,
@@ -157,7 +157,7 @@ smugglerPlugin clopts modSummary tcEnv = do
                    in AvailTC n new_ns flds
                 fix_faminst avail = avail
 
-            --  Replace a target module's imports
+            --  | Replace a target module's imports
             --  See <https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs>
             replaceImports ::
               Monad m =>
@@ -169,18 +169,15 @@ smugglerPlugin clopts modSummary tcEnv = do
               ParsedSource ->
               TransformT m ParsedSource
             replaceImports anns minImports t@(L l m) =
-              case action of
+              case importAction options of
                 NoImportProcessing -> return t
                 _ -> do
                   imps <- graftT anns minImports
                   -- nudge down the imports list onto a new line
                   unless (null imps) $ setEntryDPT (head imps) (DP (2, 0))
                   return $ L l m {hsmodImports = imps}
-              where
-                action :: ImportAction
-                action = importAction options
 
-            -- Add explict exports to the target module
+            -- | Add explict exports to the target module
             addExplicitExports ::
               Monad m =>
               -- | The list of exports to be added
@@ -228,7 +225,7 @@ smugglerPlugin clopts modSummary tcEnv = do
                     -- annotations in the current transformation
                     return $ L astLoc hsMod {hsmodExports = Just lExportsList}
 
-    -- This version of the GHC function ignores implicit imports, as the result
+    -- | This version of the GHC function ignores implicit imports, as the result
     -- cannot be parsed back in.  (There is an extraneous (implicit)')
     -- It also provides for leaving out instance-only imports (eg, Data.List() )
     printMinimalImports' :: DynFlags -> FilePath -> [ImportDeclUsage] -> RnM ()

@@ -1,0 +1,4 @@
+module Test.ConstructorsUnused (
+  foo ) where
+
+foo = not
