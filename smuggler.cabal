@@ -4,7 +4,7 @@ version:         0.3.0.0
 synopsis:        GHC Source Plugin that helps to manage imports
 description:
   == Usage
-  .
+
   Add @smuggler@ to the dependencies of your project.
   .
   Then add the following to ghc-options: @-fplugin=Smuggler.Plugin@

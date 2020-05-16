@@ -6,7 +6,7 @@
 
 - [X] refactor so that ast and anns are not threaded so explicitly through the code
 
-- [ ] check that smuggler really works with different export types
+- [ ] testing: check that smuggler really works with different export types
 
 - [ ] does hiding work?
 

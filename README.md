@@ -75,9 +75,10 @@ ghcid --command='cabal repl'
   that you may need to remove manually. Alternatively use the `MinimiseImports` option to
   remove them anyway.
 
-- Any comments in the import block will be discarded
+- Any comments in the import block will be discarded.  Similarly, blank lines in
+  in the import section will be discarded.
 
-- CPP files may not be processed correctly
+- CPP files may not be processed correctly (fixed?)
 
 - `smuggler` depends on the current `ghc` compiler and `base` library to check
   whether an import is redundant. Earlier versions of the compiler may, of
