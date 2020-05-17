@@ -75,7 +75,7 @@ ghcid --command='cabal repl'
   that you may need to remove manually. Alternatively use the `MinimiseImports` option to
   remove them anyway.
 
-- Any comments in the import block will be discarded.  Similarly, blank lines in
+- Any comments in the import block will be discarded. Similarly, blank lines in
   in the import section will be discarded.
 
 - CPP files may not be processed correctly (fixed?)
@@ -94,20 +94,22 @@ ghcid --command='cabal repl'
 
 Requirements:
 
-- `ghc-8.10.1` (untested with earlier versions)
-- `cabal >= 3.0` or `stack >= 2.0`
+- `ghc-8.6.5`, `ghc-8.8.3` and `ghc-8.10.1` Smuggler is untested with earlier versions.
+  and some of the tests fail on `ghc-8.6.5` because it needs to import `Data.Bool` whereas
+  later versions of GHC don't.
+- `cabal >= 3.0` (ideally `3.2`)
 
 ### Cabal: How to build?
 
 ```shell
-cabal update
-cabal build
+$ cabal update
+$ cabal build
 ```
 
 To build with debugging:
 
 ```shell
-cabal bulid -fdebug
+$ cabal bulid -fdebug
 ```
 
 Curently this just adds an `-fdump-minimal-imports` parameter to GHC
@@ -116,26 +118,34 @@ compilation.
 #### Stack: How to build?
 
 ```shell
-stack build
+$ stack build
 ```
 
 ### Run tests
 
 There is a `tasty-golden`-based test suite that can be run by
+
 ```shell
-cabal test smuggler-test --enable-tests
+$ cabal test smuggler-test --enable-tests
 ```
 
 Further help can be found by
+
 ```shell
-cabal run smuggler-test -- --help
+$ cabal run smuggler-test -- --help
 ```
+
 (note the extra `--`)
 
+For example, if you are running on `ghc-8.6.5` you can
+
+```shell
+$ cabal run smuggler-test -- --accept
+ ```
+to update the golden outputs to the current results of (failing) tests.
 
 It is sometimes necessary to run `cabal clean` before running tests to ensure
 that old artefacts do not lead to misleading results.
-
 
 ## Implementation approach
 
@@ -145,10 +155,11 @@ source code. The documentation for the library is fairly spartan, and the
 library is not widely used, so the use here can, no doubt, be optimised.
 
 The library is needed because the annotated AST that GHC generates does not have enough
-information to reconstitute the original source. For example, certain keywords,
-brackets, commas and formatting layout are lost. `ghc-exactprint` provides parsers that
+information to reconstitute the original source.
+Some parts of the renamed syntax tree (for example, imports) are
+not found in the typechecked one. `ghc-exactprint` provides parsers that
 preserve this information, which is stored in a separate
-`Anns` `Map` is used to generate properly formatted source text.
+`Anns` `Map` used to generate properly formatted source text.
 
 To make manipulation of GHC's AST and `ghc-exactprint`'s `Anns` easier,
 `ghc-exactprint` provides a set of Transform functions. These are intended to facilitate

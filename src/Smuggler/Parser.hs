@@ -18,6 +18,7 @@ runParser dflags fileName fileContents = do
   res <- parseModuleFromString fileName fileContents
   case res of
     Left msg -> do
+      putStr "smuggler: "
 #if __GLASGOW_HASKELL__ < 810
       print msg
       return $ Left ()

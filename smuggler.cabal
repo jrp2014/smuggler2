@@ -71,6 +71,8 @@ common common-options
 
 common executable-options
   ghc-options: -rtsopts
+  if flag(debug)
+    ghc-options: -debug
 
   if flag(threaded)
     ghc-options: -threaded -with-rtsopts=-N
