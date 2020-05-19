@@ -68,28 +68,34 @@ plugin =
 
 -- | The plugin itself
 smugglerPlugin :: [CommandLineOption] -> ModSummary -> TcGblEnv -> TcM TcGblEnv
-smugglerPlugin clopts modSummary tcEnv = do
-  -- bail quickly, if nothing to do
-  when
-    ( (importAction options == NoImportProcessing)
-        && (exportAction options == NoExportProcessing)
-    )
-    $ return tcenv
+smugglerPlugin clopts modSummary tcEnv
+    -- bail quickly, if nothing to
+  | (importAction options == NoImportProcessing)
+      && (exportAction options == NoExportProcessing) = return tcEnv
+  | otherwise = do
 
-  -- TODO: ensure that source file is not touched if there are no unused
-  -- imports, or exports already exist and we are not replacing them
+    -- TODO: ensure that source file is not touched if there are no unused
+    -- imports, or exports already exist and we are not replacing them
 
-  -- Get the imports and their usage
-  let imports = tcg_rn_imports tcEnv
-  uses <- readMutVar $ tcg_used_gres tcEnv
-  let usage = findImportUsage imports uses
+    -- Get the imports and their usage
+    let imports = tcg_rn_imports tcEnv
+    uses <- readMutVar $ tcg_used_gres tcEnv
+    let usage = findImportUsage imports uses
 
-  -- Dump GHC's view of a minimal set of imports
-  dflags <- getDynFlags
-  let minImpFilePath = mkFilePath dflags (ms_mod modSummary)
-  printMinimalImports' dflags minImpFilePath usage
+    -- Proceed only if
+    -- * there are no explict exports and we are providing them, or
+    -- * there are explict exports and we replacing them, or
+    -- * we are not skipping import processing, or
+    -- ideally, that the  new imports are different from the existing ones
+    -- TODO
 
-  tcEnv <$ liftIO (smuggling dflags minImpFilePath)
+    -- Dump GHC's view of a minimal set of imports
+    dflags <- getDynFlags
+    let minImpFilePath = mkFilePath dflags (ms_mod modSummary)
+    printMinimalImports' dflags minImpFilePath usage
+
+    tcEnv <$ liftIO (smuggling dflags minImpFilePath)
+
   where
     smuggling :: DynFlags -> FilePath -> IO ()
     smuggling dflags minImpFilePath = do
@@ -119,8 +125,6 @@ smugglerPlugin clopts modSummary tcEnv = do
               let minImports = hsmodImports impMod
 
               -- What is exported by the module
-              -- TODO: prseumably this is not the same as what is exportable,
-              -- which means that the rewrite exports action will not do much
               let exports =
                     if exportAction options == ReplaceExports
                       then exportable $ tcg_rdr_env tcEnv
