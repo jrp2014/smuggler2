@@ -29,7 +29,7 @@ compiler options to your build configuration (eg, to `ghc-options` in your
 -fplugin=Smuggler.Plugin
 ```
 
-The Plugin has serveral (case-inseneitive) options:
+The Plugin has serveral (case-insensitive) options:
 
 - `NoImportProcessing` - do no import processing
 - `PreserveInstanceImports` - remove unused imports, but preserve a library import stub.

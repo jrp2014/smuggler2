@@ -74,7 +74,10 @@ smugglerPlugin clopts modSummary tcEnv = do
     ( (importAction options == NoImportProcessing)
         && (exportAction options == NoExportProcessing)
     )
-    $ pure ()
+    $ return tcenv
+
+  -- TODO: ensure that source file is not touched if there are no unused
+  -- imports, or exports already exist and we are not replacing them
 
   -- Get the imports and their usage
   let imports = tcg_rn_imports tcEnv

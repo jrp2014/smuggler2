@@ -17,10 +17,15 @@ maintainer:      Kowainik <xrom.xkov@gmail.com>
 copyright:       2018-2019 Kowainik
 category:        Development, Refactoring
 build-type:      Simple
+
 extra-doc-files:
   README.md
   CHANGELOG.md
   TODO.md
+
+extra-source-files:
+  test/tests/*.hs
+  test/tests/*-golden
 
 tested-with:     GHC ==8.10.1
 
