@@ -1,23 +1,22 @@
-cabal-version:   3.0
-name:            smuggler
-version:         0.3.0.0
-synopsis:        GHC Source Plugin that helps to manage imports
+cabal-version:      3.0
+name:               smuggler
+version:            0.3.0.0
+synopsis:           GHC Source Plugin that helps to manage imports
 description:
   == Usage
   Add @smuggler@ to the dependencies of your project.
   .
   Then add the following to ghc-options: @-fplugin=Smuggler.Plugin@
 
-homepage:        https://github.com/kowainik/smuggler
-bug-reports:     https://github.com/kowainik/smuggler/issues
-license:         MPL-2.0
-license-file:    LICENSE
-author:          Dmitrii Kovanikov, Veronika Romashkina
-maintainer:      Kowainik <xrom.xkov@gmail.com>
-copyright:       2018-2019 Kowainik
-category:        Development, Refactoring
-build-type:      Simple
-
+homepage:           https://github.com/kowainik/smuggler
+bug-reports:        https://github.com/kowainik/smuggler/issues
+license:            MPL-2.0
+license-file:       LICENSE
+author:             Dmitrii Kovanikov, Veronika Romashkina
+maintainer:         Kowainik <xrom.xkov@gmail.com>
+copyright:          2018-2019 Kowainik
+category:           Development, Refactoring
+build-type:         Simple
 extra-doc-files:
   README.md
   CHANGELOG.md
@@ -25,9 +24,11 @@ extra-doc-files:
 
 extra-source-files:
   test/tests/*.hs
-  test/tests/*-golden
+  -- wildcards are allowed only in the basename
+  --test/tests/*.*-golden
 
-tested-with:     GHC ==8.10.1
+tested-with:
+  GHC ==8.0.2 || ==8.2.2 || ==8.4.4 || ==8.6.5 || ==8.8.3 || ==8.10.1
 
 flag debug
   description: Enable debugging support
@@ -76,6 +77,7 @@ common common-options
 
 common executable-options
   ghc-options: -rtsopts
+
   if flag(debug)
     ghc-options: -debug
 
