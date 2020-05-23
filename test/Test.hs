@@ -76,7 +76,7 @@ compile testcase opts = runProcess_ cabalConfig
       -- but it appears to be hidden otherwise.
       -- * This puts the .imports files that smuggler generates somewhere they
       -- can easily be found
-      ["exec", "--", "ghc", "-v0", "-dumpdir=" ++ testDir, "-package smuggler", "-fno-code", "-fplugin=Smuggler.Plugin"]
+      ["exec", "ghc", "--",  "-v0", "-dumpdir=" ++ testDir, "-fno-code", "-fplugin=Smuggler.Plugin"]
         ++ map
           ("-fplugin-opt=Smuggler.Plugin:" ++)
           ( let ia = importAction opts
