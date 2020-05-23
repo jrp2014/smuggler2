@@ -52,10 +52,10 @@ common common-options
   ghc-options:
     -O2 -Wall -Wextra -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wcompat -Widentities
-    -Wredundant-constraints -fhide-source-paths -Wunused-packages
+    -Wredundant-constraints -fhide-source-paths
 
   if impl(ghc >=8.10.0)
-    ghc-options: -fwrite-ide-info
+    ghc-options: -Wunused-packages -fwrite-ide-info
 
   if flag(debug)
     ghc-options: -ddump-minimal-imports

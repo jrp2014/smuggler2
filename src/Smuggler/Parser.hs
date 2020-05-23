@@ -10,7 +10,9 @@ import Language.Haskell.GHC.ExactPrint.Parsers
 import GHC ( GhcPs, HsModule )
 import SrcLoc ( Located )
 import DynFlags ( DynFlags )
+#if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
 import ErrUtils ( printBagOfErrors )
+#endif
 
 runParser
   :: DynFlags -> FilePath -> String -> IO (Either () (Anns, Located (HsModule GhcPs)))
@@ -19,11 +21,10 @@ runParser dflags fileName fileContents = do
   case res of
     Left msg -> do
       putStr "smuggler: "
-#if __GLASGOW_HASKELL__ < 810
-      print msg
-      return $ Left ()
-#else
+#if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
       printBagOfErrors dflags msg
-      return $ Left ()
+#else
+      print msg
 #endif
+      return $ Left ()
     Right x -> return $ Right x
