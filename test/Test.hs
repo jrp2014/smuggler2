@@ -6,7 +6,7 @@ import Data.Maybe (fromMaybe)
 import GHC.Paths (ghc)
 import Smuggler.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Environment (lookupEnv)
-import System.FilePath ((-<.>), (</>), takeBaseName)
+import System.FilePath ((-<.>), (</>), takeBaseName, makeValid)
 import System.Process.Typed
   ( ProcessConfig,
     proc,
@@ -56,7 +56,6 @@ goldenTests opts = do
       [ goldenVsFileDiff
           (takeBaseName testFile) -- test name
           (\ref new -> ["git", "diff", "--no-index", ref, new]) -- how to display diffs
---          (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
           (testFile -<.> testName ++ "-golden") -- golden file
           outputFilename
           ( do
@@ -92,9 +91,9 @@ compile testcase opts = do
       --   but it appears to be hidden otherwise.
       -- - This puts the .imports files that smuggler generates somewhere they
       --   can easily be found
-      [ "--with-compiler=" ++ ghc,
+      [ "--with-compiler=" ++ makeValid ghc,
         "exec",
-        ghc,
+        makeValid ghc,
         "--",
         "-package smuggler",
         "-v0",
