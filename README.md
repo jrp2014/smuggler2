@@ -147,6 +147,11 @@ to update the golden outputs to the current results of (failing) tests.
 It is sometimes necessary to run `cabal clean` before running tests to ensure
 that old artefacts do not lead to misleading results.
 
+`smuggler-test` uses `cabal exec ghc` internally to run a test.  The `cabal` command
+that is to be used to do that can be set using the `CABAL` environment variable.
+This may be helpful for certain workflows where `cabal` is not in the current
+path, or you want to add extra flags to the `cabal` command.
+
 ## Implementation approach
 
 `smuggler` uses the `ghc-exactprint`

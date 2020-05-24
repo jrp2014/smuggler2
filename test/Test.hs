@@ -9,12 +9,11 @@ import Smuggler.Options
     ImportAction (..),
     Options (..),
   )
+import System.Environment (getEnvironment, lookupEnv)
 import System.FilePath ((-<.>), (</>), takeBaseName)
-import System.Environment (lookupEnv)
 import System.Process.Typed (ProcessConfig, proc, runProcess_)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (findByExtension, goldenVsFileDiff)
-
 
 -- | Where the tests are, relative to the project level cabal file
 testDir :: FilePath
@@ -50,13 +49,13 @@ goldenTests opts = do
       [ goldenVsFileDiff
           (takeBaseName testFile) -- test name
           (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
-          (testFile -<.> testName  ++ "-golden") -- golden file
+          (testFile -<.> testName ++ "-golden") -- golden file
           (testFile -<.> testName) -- output file
           (compile testFile opts)
         | testFile <- testFiles
       ]
   where
-      testName = fromMaybe "NoNewExtension" (newExtension opts)
+    testName = fromMaybe "NoNewExtension" (newExtension opts)
 
 main :: IO ()
 main = defaultMain =<< testOptions optionsList
@@ -65,20 +64,21 @@ main = defaultMain =<< testOptions optionsList
 -- picked up from the local database.  GHC alone would use the global one.
 compile :: FilePath -> Options -> IO ()
 compile testcase opts = do
-    cabalPath <- lookupEnv "CABAL"
-    let cabalCmd = fromMaybe "cabal" cabalPath
-    let cabalConfig = proc cabalCmd cabalArgs :: ProcessConfig () () ()
+    env <- getEnvironment
+    print env
+    cabalPath <- lookupEnv "CABAL" -- find, eg, @/opt/ghc/bin/cabal@ or @cabal -vnormal+nowrap@
+    let cabalCmd = words $ fromMaybe "cabal" cabalPath -- default to "cabal" if @CABAL@ is not set
+    let cabalConfig = proc (head cabalCmd) (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
     print cabalConfig
     runProcess_ cabalConfig
   where
-
     cabalArgs :: [String]
     cabalArgs =
-      -- * no sure why it is necessary to mention the smuggler package explicitly,
-      -- but it appears to be hidden otherwise.
-      -- * This puts the .imports files that smuggler generates somewhere they
-      -- can easily be found
-      ["exec", ghc, "--",  "-package smuggler", "-v0", "-dumpdir=" ++ testDir, "-fno-code", "-fplugin=Smuggler.Plugin"]
+      -- - not sure why it is necessary to mention the smuggler package explicitly,
+      --   but it appears to be hidden otherwise.
+      -- - This puts the .imports files that smuggler generates somewhere they
+      --   can easily be found
+      ["exec", ghc, "--", "-package smuggler", "-v0", "-dumpdir=" ++ testDir, "-fno-code", "-fplugin=Smuggler.Plugin"]
         ++ map
           ("-fplugin-opt=Smuggler.Plugin:" ++)
           ( let ia = importAction opts
