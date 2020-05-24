@@ -3,6 +3,7 @@
 module Main where
 
 import Data.Maybe (fromMaybe)
+import GHC.Paths (ghc)
 import Smuggler.Options
   ( ExportAction (..),
     ImportAction (..),
@@ -72,11 +73,11 @@ compile testcase opts = runProcess_ cabalConfig
 
     cabalArgs :: [String]
     cabalArgs =
-      -- * no sure why it is necessary to mention the smuggler package explictly,
+      -- * no sure why it is necessary to mention the smuggler package explicitly,
       -- but it appears to be hidden otherwise.
       -- * This puts the .imports files that smuggler generates somewhere they
       -- can easily be found
-      ["exec", "ghc", "--",  "-package smuggler", "-v0", "-dumpdir=" ++ testDir, "-fno-code", "-fplugin=Smuggler.Plugin"]
+      ["exec", ghc, "--",  "-package smuggler", "-v0", "-dumpdir=" ++ testDir, "-fno-code", "-fplugin=Smuggler.Plugin"]
         ++ map
           ("-fplugin-opt=Smuggler.Plugin:" ++)
           ( let ia = importAction opts

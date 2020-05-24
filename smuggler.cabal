@@ -122,6 +122,7 @@ test-suite smuggler-test
   hs-source-dirs: test
   build-depends:
     , filepath
+    , ghc-paths
     , smuggler
     , tasty
     , tasty-golden
