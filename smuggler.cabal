@@ -22,13 +22,12 @@ extra-doc-files:
   CHANGELOG.md
   TODO.md
 
-extra-source-files:
-  test/tests/*.hs
-  -- wildcards are allowed only in the basename
-  --test/tests/*.*-golden
+extra-source-files: test/tests/*.hs
 
-tested-with:
-  GHC ==8.0.2 || ==8.2.2 || ==8.4.4 || ==8.6.5 || ==8.8.3 || ==8.10.1
+-- wildcards are allowed only in the basename
+--test/tests/*.*-golden
+
+tested-with:        GHC ==8.6.5 || ==8.8.3 || ==8.10.1
 
 flag debug
   description: Enable debugging support
