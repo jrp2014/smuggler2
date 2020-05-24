@@ -10,6 +10,7 @@ import Smuggler.Options
     Options (..),
   )
 import System.FilePath ((-<.>), (</>), takeBaseName)
+import System.Environment (lookupEnv)
 import System.Process.Typed (ProcessConfig, proc, runProcess_)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (findByExtension, goldenVsFileDiff)
@@ -64,14 +65,12 @@ main = defaultMain =<< testOptions optionsList
 -- picked up from the local database.  GHC alone would use the global one.
 compile :: FilePath -> Options -> IO ()
 compile testcase opts = do
+    cabalPath <- lookupEnv "CABAL"
+    let cabalCmd = fromMaybe "cabal" cabalPath
+    let cabalConfig = proc cabalCmd cabalArgs :: ProcessConfig () () ()
     print cabalConfig
     runProcess_ cabalConfig
   where
-    cabalConfig :: ProcessConfig () () ()
-    cabalConfig = proc cabalCmd cabalArgs
-
-    cabalCmd :: FilePath
-    cabalCmd = "cabal"
 
     cabalArgs :: [String]
     cabalArgs =
