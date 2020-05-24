@@ -63,7 +63,9 @@ main = defaultMain =<< testOptions optionsList
 -- | Use `cabal exec` to run the compilation, so that the smuggler plugin is
 -- picked up from the local database.  GHC alone would use the global one.
 compile :: FilePath -> Options -> IO ()
-compile testcase opts = runProcess_ cabalConfig
+compile testcase opts = do
+    print cabalConfig
+    runProcess_ cabalConfig
   where
     cabalConfig :: ProcessConfig () () ()
     cabalConfig = proc cabalCmd cabalArgs

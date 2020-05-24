@@ -165,7 +165,7 @@ script:
   # build & run tests, build benchmarks
   - ${CABAL} v2-build $WITHCOMPILER ${TEST} ${BENCH} all
   # Testing...
-  - ${CABAL} v2-test $WITHCOMPILER ${TEST} ${BENCH} all
+  - ${CABAL} v2-test --test-show-details=always $WITHCOMPILER ${TEST} ${BENCH} all
   # HLint..
   - if [ $HCNUMVER -ge 81000 ] && [ $HCNUMVER -lt 81002 ] ; then (cd ${PKGDIR_smuggler} && hlint -XDeriveGeneric -XGeneralizedNewtypeDeriving -XInstanceSigs -XLambdaCase -XOverloadedStrings -XRecordWildCards -XScopedTypeVariables -XStandaloneDeriving -XTypeApplications src) ; fi
   - if [ $HCNUMVER -ge 81000 ] && [ $HCNUMVER -lt 81002 ] ; then (cd ${PKGDIR_smuggler} && hlint -XDeriveGeneric -XGeneralizedNewtypeDeriving -XInstanceSigs -XLambdaCase -XOverloadedStrings -XRecordWildCards -XScopedTypeVariables -XStandaloneDeriving -XTypeApplications app) ; fi
