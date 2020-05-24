@@ -10,21 +10,24 @@ jobs:
   build:
     name: Haskell GHC ${{ matrix.ghc }} smuggler
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
+      fail-fast: false
       matrix:
-        ghc: ['8.10.1', '8.8.3', '8.6.5']
+        ghc: ['8.10.1', '8.8.3']
+        cabal: 3.2
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        experimental: [false]
         exclude:
           - os: macOS-latest
             ghc: 8.8.3
-          - os: macOS-latest
-            ghc: 8.6.5
           - os: windows-latest
             ghc: 8.8.3
-          - os: windows-latest
-            ghc: 8.6.5
-        cabal: ['3.2']
-        os: [ubuntu-latest, macOS-latest]
-      fail-fast: false
+        include:
+          - ghc: 8.6.5
+            cabal: 3.0
+            os: ubuntu-latest
+            experimental: true
 
     steps:
       - uses: actions/checkout@v2
