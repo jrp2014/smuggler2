@@ -55,13 +55,14 @@ goldenTests opts = do
       testName
       [ goldenVsFileDiff
           (takeBaseName testFile) -- test name
-          (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
+          (\ref new -> ["git", "diff", "--no-index", ref, new]) -- how to display diffs
+--          (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
           (testFile -<.> testName ++ "-golden") -- golden file
           outputFilename
           ( do
               -- Write a default output file for those tests where smuggler
               -- (deliberately) does not generate a new one
-              writeBinaryFile outputFilename "Source file was not touched\n"
+              writeBinaryFile outputFilename "Source file was not touched\r\n"
               compile testFile opts
           )
         | testFile <- testFiles,
