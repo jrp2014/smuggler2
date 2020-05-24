@@ -46,7 +46,7 @@ source-repository head
 
 common common-options
   -- test these bounds
-  build-depends:      base >=4.12 && <4.15
+  build-depends:      base >=4.9 && <4.16
 
   -- -O2 gives a nearly 10% speed improvement
   ghc-options:

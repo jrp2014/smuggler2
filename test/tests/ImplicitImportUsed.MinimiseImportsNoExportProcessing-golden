@@ -1,5 +1,1 @@
-module Test.ImplicitImportUsed where
-
-import Data.List ( intercalate )
-
-foo = intercalate ","
+Source file was not touched

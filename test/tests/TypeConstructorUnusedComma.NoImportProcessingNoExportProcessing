@@ -1,5 +1,1 @@
-module Test.TypeConstructorUnusedComma where
-
-import Data.Bool (Bool (False, True))
-
-false = False
+Source file was not touched

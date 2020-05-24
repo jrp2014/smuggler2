@@ -6,11 +6,18 @@ import Data.Maybe (fromMaybe)
 import GHC.Paths (ghc)
 import Smuggler.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Environment (getEnvironment, lookupEnv)
-import System.FilePath (takeBaseName, (-<.>), (</>))
-import System.Process.Typed (ProcessConfig, proc, runProcess_, setChildGroupInherit,
-                             setChildUserInherit, setEnvInherit, setWorkingDirInherit)
+import System.FilePath ((-<.>), (</>), takeBaseName, takeFileName)
+import System.Process.Typed
+  ( ProcessConfig,
+    proc,
+    runProcess_,
+    setChildGroupInherit,
+    setChildUserInherit,
+    setEnvInherit,
+    setWorkingDirInherit,
+  )
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Golden (findByExtension, goldenVsFileDiff)
+import Test.Tasty.Golden (findByExtension, goldenVsFileDiff, writeBinaryFile)
 
 -- | Where the tests are, relative to the project level cabal file
 testDir :: FilePath
@@ -30,8 +37,9 @@ optionsList =
     mkOptions :: ImportAction -> ExportAction -> Options
     mkOptions ia ea = Options ia ea (Just $ mkExt ia ea)
 
+-- | Make an extention for an output file
 mkExt :: ImportAction -> ExportAction -> String
-mkExt ia ea = show ia ++ show ea
+mkExt ia ea = show ia ++ show ea -- ++ "-" ++ takeFileName ghc
 
 testOptions :: [Options] -> IO TestTree
 testOptions opts =
@@ -47,9 +55,15 @@ goldenTests opts = do
           (takeBaseName testFile) -- test name
           (\ref new -> ["diff", "-u", ref, new]) -- how to display diffs
           (testFile -<.> testName ++ "-golden") -- golden file
-          (testFile -<.> testName) -- output file
-          (compile testFile opts)
-        | testFile <- testFiles
+          outputFilename
+          ( do
+              -- write a default output file for those cases where smuggler
+              -- does not generate a new one
+              writeBinaryFile outputFilename "Source file was not touched\n"
+              compile testFile opts
+          )
+        | testFile <- testFiles,
+          let outputFilename = testFile -<.> testName
       ]
   where
     testName = fromMaybe "NoNewExtension" (newExtension opts)
@@ -66,14 +80,15 @@ compile testcase opts = do
   cabalPath <- lookupEnv "CABAL" -- find, eg, @/opt/ghc/bin/cabal@ or @cabal -vnormal+nowrap@
   let cabalCmd = words $ fromMaybe "cabal" cabalPath -- default to @cabal@ if @CABAL@ is not set
   let cabalConfig =
-        setChildUserInherit .
-        setChildGroupInherit .
-        setWorkingDirInherit .
-        setEnvInherit $
-          proc
+        setChildUserInherit
+          . setChildGroupInherit
+          . setWorkingDirInherit
+          . setEnvInherit
+          $ proc
             (head cabalCmd)
-            (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
-  print cabalConfig
+            (tail cabalCmd ++ cabalArgs) ::
+          ProcessConfig () () ()
+  -- print cabalConfig
   runProcess_ cabalConfig
   where
     cabalArgs :: [String]
@@ -99,6 +114,6 @@ compile testcase opts = do
                 p = [show ia, show ea]
              in case newExtension opts of
                   Nothing -> mkExt ia ea : p -- provide a default extension
-                  Just e  -> e : p
+                  Just e -> e : p
           )
         ++ [testcase]

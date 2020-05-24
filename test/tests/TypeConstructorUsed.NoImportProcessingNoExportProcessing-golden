@@ -1,5 +1,1 @@
-module Test.TypeConstructorUsed where
-
-import Data.Bool (Bool (True))
-
-true = True
+Source file was not touched

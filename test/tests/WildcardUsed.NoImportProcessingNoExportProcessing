@@ -1,5 +1,1 @@
-module Test.WildcardUsed where
-
-import Data.Bool (Bool (..))
-
-foo = False
+Source file was not touched
