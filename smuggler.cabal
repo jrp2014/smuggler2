@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               smuggler
-version:            0.3.0.0
+version:            0.3.1.0
 synopsis:           GHC Source Plugin that helps to manage imports
 description:
   == Usage
@@ -97,7 +97,7 @@ library
     , containers      >=0.5
     , directory       >=1.2
     , filepath        >=1.4
-    , ghc             >=8.6.5
+    , ghc             >=8.0
     , ghc-exactprint  >=0.6
     , syb             >=0.5
 

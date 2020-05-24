@@ -5,8 +5,8 @@ module Main where
 import Data.Maybe (fromMaybe)
 import GHC.Paths (ghc)
 import Smuggler.Options (ExportAction (..), ImportAction (..), Options (..))
-import System.Environment (getEnvironment, lookupEnv)
-import System.FilePath ((-<.>), (</>), takeBaseName, takeFileName)
+import System.Environment (lookupEnv)
+import System.FilePath ((-<.>), (</>), takeBaseName)
 import System.Process.Typed
   ( ProcessConfig,
     proc,
@@ -41,10 +41,15 @@ optionsList =
 mkExt :: ImportAction -> ExportAction -> String
 mkExt ia ea = show ia ++ show ea -- ++ "-" ++ takeFileName ghc
 
+
+-- | Generate test for a list of 'Options' each of which specify what action to
+-- take on imports and exports
 testOptions :: [Options] -> IO TestTree
 testOptions opts =
   testGroup "All" <$> sequenceA (goldenTests <$> opts)
 
+-- | Generate tests for a set of 'Options' (that specifies what to do to
+-- imports and exports)
 goldenTests :: Options -> IO TestTree
 goldenTests opts = do
   testFiles <- findByExtension [".hs"] testDir
@@ -57,8 +62,8 @@ goldenTests opts = do
           (testFile -<.> testName ++ "-golden") -- golden file
           outputFilename
           ( do
-              -- write a default output file for those cases where smuggler
-              -- does not generate a new one
+              -- Write a default output file for those tests where smuggler
+              -- (deliberately) does not generate a new one
               writeBinaryFile outputFilename "Source file was not touched\n"
               compile testFile opts
           )
@@ -68,6 +73,7 @@ goldenTests opts = do
   where
     testName = fromMaybe "NoNewExtension" (newExtension opts)
 
+-- | Just run all the tests
 main :: IO ()
 main = defaultMain =<< testOptions optionsList
 
@@ -75,20 +81,18 @@ main = defaultMain =<< testOptions optionsList
 -- picked up from the local database.  GHC alone would use the global one.
 compile :: FilePath -> Options -> IO ()
 compile testcase opts = do
-  -- env <- getEnvironment
-  -- print env
   cabalPath <- lookupEnv "CABAL" -- find, eg, @/opt/ghc/bin/cabal@ or @cabal -vnormal+nowrap@
   let cabalCmd = words $ fromMaybe "cabal" cabalPath -- default to @cabal@ if @CABAL@ is not set
   let cabalConfig =
+        -- Not sure which of these inherits are necessary for travis,
+        -- but they seem to do no harm
         setChildUserInherit
           . setChildGroupInherit
           . setWorkingDirInherit
           . setEnvInherit
           $ proc
             (head cabalCmd)
-            (tail cabalCmd ++ cabalArgs) ::
-          ProcessConfig () () ()
-  -- print cabalConfig
+            (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
   runProcess_ cabalConfig
   where
     cabalArgs :: [String]
