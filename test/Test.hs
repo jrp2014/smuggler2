@@ -11,8 +11,6 @@ import System.Process.Typed
   ( ProcessConfig,
     proc,
     runProcess_,
-    setChildGroupInherit,
-    setChildUserInherit,
     setEnvInherit,
     setWorkingDirInherit,
   )
@@ -40,7 +38,6 @@ optionsList =
 -- | Make an extention for an output file
 mkExt :: ImportAction -> ExportAction -> String
 mkExt ia ea = show ia ++ show ea -- ++ "-" ++ takeFileName ghc
-
 
 -- | Generate test for a list of 'Options' each of which specify what action to
 -- take on imports and exports
@@ -84,15 +81,8 @@ compile testcase opts = do
   cabalPath <- lookupEnv "CABAL" -- find, eg, @/opt/ghc/bin/cabal@ or @cabal -vnormal+nowrap@
   let cabalCmd = words $ fromMaybe "cabal" cabalPath -- default to @cabal@ if @CABAL@ is not set
   let cabalConfig =
-        -- Not sure which of these inherits are necessary for travis,
-        -- but they seem to do no harm
-        setChildUserInherit
-          . setChildGroupInherit
-          . setWorkingDirInherit
-          . setEnvInherit
-          $ proc
-            (head cabalCmd)
-            (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
+        setWorkingDirInherit . setEnvInherit $
+          proc (head cabalCmd) (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
   runProcess_ cabalConfig
   where
     cabalArgs :: [String]
