@@ -11,7 +11,7 @@ import Smuggler.Options
   )
 import System.Environment (getEnvironment, lookupEnv)
 import System.FilePath ((-<.>), (</>), takeBaseName)
-import System.Process.Typed (ProcessConfig, proc, runProcess_)
+import System.Process.Typed (setEnvInherit, ProcessConfig, proc, runProcess_)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (findByExtension, goldenVsFileDiff)
 
@@ -68,7 +68,7 @@ compile testcase opts = do
     print env
     cabalPath <- lookupEnv "CABAL" -- find, eg, @/opt/ghc/bin/cabal@ or @cabal -vnormal+nowrap@
     let cabalCmd = words $ fromMaybe "cabal" cabalPath -- default to "cabal" if @CABAL@ is not set
-    let cabalConfig = proc (head cabalCmd) (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
+    let cabalConfig = setEnvInherit $ proc (head cabalCmd) (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
     print cabalConfig
     runProcess_ cabalConfig
   where
