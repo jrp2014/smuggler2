@@ -6,7 +6,7 @@ import Data.Maybe (fromMaybe)
 import GHC.Paths (ghc)
 import Smuggler.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Environment (lookupEnv)
-import System.FilePath ((-<.>), (</>), takeBaseName, makeValid)
+import System.FilePath ((-<.>), (</>), takeBaseName)
 import System.Process.Typed
   ( ProcessConfig,
     proc,
@@ -91,9 +91,9 @@ compile testcase opts = do
       --   but it appears to be hidden otherwise.
       -- - This puts the .imports files that smuggler generates somewhere they
       --   can easily be found
-      [ "--with-compiler=" ++ makeValid ghc,
+      [ "--with-compiler=" ++ ghc,
         "exec",
-        makeValid ghc,
+        ghc,
         "--",
         "-package smuggler",
         "-v0",

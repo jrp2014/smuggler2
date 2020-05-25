@@ -90,6 +90,9 @@ ghcid --command='cabal repl'
 
 - `hiding` clauses may not be properly analysed
 
+-  The test suite does not seem to run reliably on Windows.  This is probably
+   more of an issue with the way that the tests are run, than Smuggler itself.
+
 ## For contributors
 
 Requirements:
@@ -99,7 +102,7 @@ Requirements:
   later versions of GHC don't.
 - `cabal >= 3.0` (ideally `3.2`)
 
-### Cabal: How to build?
+### How to build
 
 ```shell
 $ cabal update
@@ -115,13 +118,7 @@ $ cabal bulid -fdebug
 Curently this just adds an `-fdump-minimal-imports` parameter to GHC
 compilation.
 
-#### Stack: How to build?
-
-```shell
-$ stack build
-```
-
-### Run tests
+### How to run tests
 
 There is a `tasty-golden`-based test suite that can be run by
 
@@ -151,6 +148,9 @@ that old artefacts do not lead to misleading results.
 that is to be used to do that can be set using the `CABAL` environment variable.
 This may be helpful for certain workflows where `cabal` is not in the current
 path, or you want to add extra flags to the `cabal` command.
+
+The test suite does not run reliably on Windows
+
 
 ## Implementation approach
 

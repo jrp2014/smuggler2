@@ -8,60 +8,60 @@ on:
 
 jobs:
   build:
-    name: Haskell GHC ${{ matrix.ghc }} smuggler
+    name: Unit tests for Smuggler using GHC ${{ matrix.ghc }}, Cabal ${{ matrix.cabal }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
-        ghc: [8.10.1, 8.8.3]
-        cabal: [3.2]
+        ghc: ['8.10.1', '8.8.3']
+        cabal: ['3.2']
         os: [ubuntu-latest, macOS-latest, windows-latest]
         experimental: [false]
-        exclude:
-          - os: macOS-latest
-            ghc: 8.8.3
         include:
-          - ghc: 8.6.5
-            cabal: 3.0
+          - ghc: '8.6.5'
+            cabal: '3.0'
             os: ubuntu-latest
             experimental: true
 
     steps:
       - uses: actions/checkout@v2
-        if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
+      - uses: ./
 
       - name: Setup Haskell
-        uses: actions/setup-haskell@v1
+        uses: actions/setup-haskell@v1.1
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
 
-      - name: Cache Cabal
-        uses: actions/cache@v1
-        env:
-          cache-name: cache-cabal
-        with:
-          path: ~/.cabal
-          key: ${{ runner.os }}-${{ matrix.ghc }}-${{ env.cache-name }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/cabal.project') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.ghc }}-${{ env.cache-name }}-
-            ${{ runner.os }}-${{ matrix.ghc }}-
-            ${{ runner.os }}-
-
-      - name: Cache dist-newstyle
-        uses: actions/cache@v1
-        with:
-          path: dist-newstyle
-          key: ${{ runner.os }}-${{ matrix.ghc }}-dist-newstyle
-
-      - name: Install dependencies
+      - name: Configure the build plan
         run: |
           cabal update
-          cabal build --only-dependencies --enable-tests --write-ghc-environment-files=always
+          cabal configure --upgrade-dependenices --enable-tests
 
-      - name: Build
-        run: cabal build --enable-tests all
+      - name: Versions
+        run: |
+          cabal --version
+          ghc --version
+
+      - uses: actions/cache@v1
+        name: Cache dependencies
+        with:
+          path: "~/.cabal"
+          # The file `plan.json` contains the build information.
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc-version }}-${{ matrix.cabal-version }}-${{ hashFiles('**/plan.json') }}
+
+      - uses: actions/cache@v1
+        name: Cache dist-newstyle
+        with:
+          path: dist-newstyle/build
+          key: ${{ runner.os }}-dist-${{ matrix.ghc-version }}-${{ matrix.cabal-version }}-${{ hashFiles('**/plan.json') }}
+
+      - name: Build dependencies
+        run: cabal build --only-dependencies --write-ghc-environment-files=always
+
+      - name: Build Smuggler
+        run: cabal build
 
       - name: Run tests
-        run: cabal test all --enable-tests
+        run: cabal -j2 test
