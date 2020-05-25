@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Unit tests for Smuggler using GHC ${{ matrix.ghc }}, Cabal ${{ matrix.cabal }} - ${{ matrix.os }}
+    name: ${{matrix.os }} - GHC ${{ matrix.ghc }}, Cabal ${{ matrix.cabal }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     strategy:
@@ -26,9 +26,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: ./
 
-      - name: Setup Haskell
+      - name: Setup Haskell and Cabal
         uses: actions/setup-haskell@v1.1
         with:
           ghc-version: ${{ matrix.ghc }}
@@ -47,7 +46,7 @@ jobs:
       - uses: actions/cache@v1
         name: Cache dependencies
         with:
-          path: "~/.cabal"
+          path: '~/.cabal'
           # The file `plan.json` contains the build information.
           key: ${{ runner.os }}-cabal-${{ matrix.ghc-version }}-${{ matrix.cabal-version }}-${{ hashFiles('**/plan.json') }}
 
