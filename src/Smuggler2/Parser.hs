@@ -1,30 +1,32 @@
 {-# LANGUAGE CPP #-}
+
 module Smuggler2.Parser
-  ( runParser
+  ( runParser,
   )
 where
 
-import Language.Haskell.GHC.ExactPrint ( Anns )
-import Language.Haskell.GHC.ExactPrint.Parsers
-    ( parseModuleFromString )
-import GHC ( GhcPs, HsModule )
-import SrcLoc ( Located )
-import DynFlags ( DynFlags )
-#if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
-import ErrUtils ( printBagOfErrors )
-#endif
+import DynFlags (DynFlags (..))
+import ErrUtils (logOutput, printBagOfErrors)
+import GHC (ParsedSource)
+import Language.Haskell.GHC.ExactPrint (Anns)
+import Language.Haskell.GHC.ExactPrint.Parsers (parseModuleFromStringInternal)
+import Outputable (defaultUserStyle, text)
 
-runParser
-  :: DynFlags -> FilePath -> String -> IO (Either () (Anns, Located (HsModule GhcPs)))
+-- | Wrapper around the 'ghc-exactprint' parser.  Prints diagnostics for failed parses
+-- (which should never happen). We need to use 'parseModuleFromStringInternal'
+-- because 'parseMofuleFromString' doesn't pick up the correct 'DynFlags' in
+-- some cases.
+runParser ::
+  DynFlags -> FilePath -> String -> IO (Either () (Anns, ParsedSource))
 runParser dflags fileName fileContents = do
-  res <- parseModuleFromString fileName fileContents
+  let res = parseModuleFromStringInternal dflags fileName fileContents
   case res of
     Left msg -> do
-      putStr "smuggler: "
 #if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
+      logOutput dflags (defaultUserStyle dflags)  (text "smuggler parse failure:")
       printBagOfErrors dflags msg
 #else
-      print msg
+      logOutput dflags (defaultUserStyle dflags)  (text "smuggler parse failure: " ++ msg)
 #endif
       return $ Left ()
     Right x -> return $ Right x

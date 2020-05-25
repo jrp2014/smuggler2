@@ -21,8 +21,11 @@ Haskell Source Plugin which removes unused imports and adds explicit exports aut
 
 ## How to use
 
-Add `smuggler2` to the dependencies of your project. (The original `smuggler2`
-plugin has a similar interface.)
+- Add `smuggler2` to the dependencies of your project, or,
+- if you have built `smuggler2` from a local copy of this repository and installed it
+  you may only need to add `-package smuggler2` to your `ghc-options`.  (You may
+  need to install using `cabal v1-install` for `smuggler2` to be recognised, at
+  least while there is no Hackage version available.)
 
 Then add the following compiler options to your build configuration
 (eg, to `ghc-options` in your `.cabal` file):
@@ -123,6 +126,9 @@ $ cabal bulid -fdebug
 
 Curently this just adds an `-fdump-minimal-imports` parameter to GHC
 compilation.
+
+
+
 
 ### How to run tests
 
