@@ -8,7 +8,7 @@
 -->
 
 [![MPL-2.0 license](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/kowainik/smuggler/blob/master/LICENSE)
-![Github CI](https://github.com/jrp2014/smuggler/workflows/Smuggler/badge.svg)
+![Github CI](https://github.com/jrp2014/smuggler/workflows/Smuggler2/badge.svg)
 
 > “So many people consider their work a daily punishment. Whereas I love my work
 > as a translator. Translation is a journey over a sea from one shore to the
@@ -21,15 +21,21 @@ Haskell Source Plugin which removes unused imports and adds explicit exports aut
 
 ## How to use
 
-Add `smuggler` to the dependencies of your project. Then add the following
-compiler options to your build configuration (eg, to `ghc-options` in your
-`.cabal` file):
+Add `smuggler2` to the dependencies of your project. (The original `smuggler2`
+plugin has a similar interface.)
+
+Then add the following compiler options to your build configuration
+(eg, to `ghc-options` in your `.cabal` file):
 
 ```
--fplugin=Smuggler.Plugin
+-fplugin=Smuggler2.Plugin
 ```
 
-The Plugin has serveral (case-insensitive) options:
+Note that you will probably want to use a `cabal` flag or a separate build
+target to avoid applying `smuggler2` to your external dependencies.
+
+The Plugin has serveral (case-insensitive) options, which can be set by adding a
+`-fplugin-opt=Smuggler2.Plugin:` compiler option to your build configuration:
 
 - `NoImportProcessing` - do no import processing
 - `PreserveInstanceImports` - remove unused imports, but preserve a library import stub.
@@ -50,13 +56,13 @@ Any other option value is used to generate a source file with the option value u
 a new extension rather than replacing the original file. For example,
 
 ```
--fplugins-opt=Smuggler.Plugin:new
+-fplugin-opt=Smuggler2.Plugin:new
 ```
 
 will create output files with a `.new` suffix rather the overwriting the originals.
 
 A lovely addition to this package is that it automatically supports on-the-fly
-feature if you use it with `ghcid`. Smuggler doesn't perform file changes when
+feature if you use it with `ghcid`. Smuggler2 doesn't perform file changes when
 there are no unused imports. So you can just run `ghcid` as usual:
 
 ```
@@ -65,7 +71,7 @@ ghcid --command='cabal repl'
 
 ## Caveats
 
-- By default `smuggler` does not remove imports completely because an import may be being
+- By default `smuggler2` does not remove imports completely because an import may be being
   used to only import instances of typeclasses, So it will leave stubs like
 
   ```haskell
@@ -80,7 +86,7 @@ ghcid --command='cabal repl'
 
 - CPP files may not be processed correctly (fixed?)
 
-- `smuggler` depends on the current `ghc` compiler and `base` library to check
+- `smuggler2` depends on the current `ghc` compiler and `base` library to check
   whether an import is redundant. Earlier versions of the compiler may, of
   course, need it. The [base library
   changelog](https://hackage.haskell.org/package/base/changelog) provides some
@@ -90,14 +96,14 @@ ghcid --command='cabal repl'
 
 - `hiding` clauses may not be properly analysed
 
--  The test suite does not seem to run reliably on Windows.  This is probably
-   more of an issue with the way that the tests are run, than Smuggler itself.
+- The test suite does not seem to run reliably on Windows. This is probably
+  more of an issue with the way that the tests are run, than `Smuggler2` itself.
 
 ## For contributors
 
 Requirements:
 
-- `ghc-8.6.5`, `ghc-8.8.3` and `ghc-8.10.1` Smuggler is untested with earlier versions.
+- `ghc-8.6.5`, `ghc-8.8.3` and `ghc-8.10.1` Smuggler2 is untested with earlier versions.
   and some of the tests fail on `ghc-8.6.5` because it needs to import `Data.Bool` whereas
   later versions of GHC don't.
 - `cabal >= 3.0` (ideally `3.2`)
@@ -138,23 +144,23 @@ For example, if you are running on `ghc-8.6.5` you can
 
 ```shell
 $ cabal run smuggler-test -- --accept
- ```
+```
+
 to update the golden outputs to the current results of (failing) tests.
 
 It is sometimes necessary to run `cabal clean` before running tests to ensure
 that old artefacts do not lead to misleading results.
 
-`smuggler-test` uses `cabal exec ghc` internally to run a test.  The `cabal` command
+`smuggler-test` uses `cabal exec ghc` internally to run a test. The `cabal` command
 that is to be used to do that can be set using the `CABAL` environment variable.
 This may be helpful for certain workflows where `cabal` is not in the current
 path, or you want to add extra flags to the `cabal` command.
 
 The test suite does not run reliably on Windows
 
-
 ## Implementation approach
 
-`smuggler` uses the `ghc-exactprint`
+`smuggler2` uses the `ghc-exactprint`
 [library](https://hackage.haskell.org/package/ghc-exactprint) to modiify the
 source code. The documentation for the library is fairly spartan, and the
 library is not widely used, so the use here can, no doubt, be optimised.
@@ -180,7 +186,7 @@ making changes to the AST and adjusting the `Anns` to suit the changes.
 
 ### Imports
 
-`smuggler` uses GHC to generate a set of minimal imports. It
+`smuggler2` uses GHC to generate a set of minimal imports. It
 
 - parses the original file
 - dumps the minimal exports that GHC generates and parses them back in (to pick
@@ -189,9 +195,9 @@ making changes to the AST and adjusting the `Anns` to suit the changes.
   for instances only
 - replaces the original imports with minimal ones
 - `exactprint`s the result back over the original file (or one with a different
-  suffix, if that was specified as option to `smuggler`)
+  suffix, if that was specified as option to `smuggler2`)
 
-A point of additional complexity is that the AST provided by GHC to `smuggler`
+A point of additional complexity is that the AST provided by GHC to `smuggler2`
 is of a different type from the AST that `ghc-exactprint` produces. (It is the
 product of the renaming phase of the compiler, while `ghc-exactprint` produces
 a parse phase AST.)
@@ -205,7 +211,7 @@ syntax used to replace the existing export list, if any.
 
 ## Other projects
 
-- the original version of [`smuggler`](https://hackage.haskell.org/package/smuggler) on which this one is based
+- the original version of [`smuggler2`](https://hackage.haskell.org/package/smuggler) on which this one is based
 - `retrie` a [code modding tool](https://hackage.haskell.org/package/retrie)
   that works with GHC 8.10.1
 - `refact-global-hse` an ambitious [import refactoring tool](https://github.com/ddssff/refact-global-hse).

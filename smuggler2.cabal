@@ -1,12 +1,12 @@
 cabal-version:      3.0
-name:               smuggler
+name:               smuggler2
 version:            0.3.1.0
 synopsis:           GHC Source Plugin that helps to manage imports
 description:
   == Usage
-  Add @smuggler@ to the dependencies of your project.
+  Add @smuggler2@ to the dependencies of your project.
   .
-  Then add the following to ghc-options: @-fplugin=Smuggler.Plugin@
+  Then add the following to ghc-options: @-fplugin=Smuggler2.Plugin@
 
 homepage:           https://github.com/kowainik/smuggler
 bug-reports:        https://github.com/kowainik/smuggler/issues
@@ -87,10 +87,10 @@ library
   import:          common-options
   hs-source-dirs:  src
   exposed-modules:
-    Smuggler.Anns
-    Smuggler.Options
-    Smuggler.Parser
-    Smuggler.Plugin
+    Smuggler2.Anns
+    Smuggler2.Options
+    Smuggler2.Parser
+    Smuggler2.Plugin
 
   build-depends:
     , containers      >=0.5
@@ -104,25 +104,25 @@ library
     build-depends: text
 
 -- Currently doesn't do anything much
-executable play-smuggler
+executable play-smuggler2
   import:         common-options
   import:         executable-options
   hs-source-dirs: app
   main-is:        Main.hs
 
   if flag(debug)
-    ghc-options: -fplugin=Smuggler.Plugin
+    ghc-options: -fplugin=Smuggler2.Plugin
 
-  build-depends:  smuggler
+  build-depends:  smuggler2
 
-test-suite smuggler-test
+test-suite smuggler2-test
   import:         common-options
   type:           exitcode-stdio-1.0
   hs-source-dirs: test
   build-depends:
     , filepath
     , ghc-paths
-    , smuggler
+    , smuggler2
     , tasty
     , tasty-golden
     , typed-process

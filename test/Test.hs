@@ -4,7 +4,7 @@ module Main where
 
 import Data.Maybe (fromMaybe)
 import GHC.Paths (ghc)
-import Smuggler.Options (ExportAction (..), ImportAction (..), Options (..))
+import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Environment (lookupEnv)
 import System.FilePath ((-<.>), (</>), takeBaseName)
 import System.Process.Typed
@@ -87,7 +87,7 @@ compile testcase opts = do
   where
     cabalArgs :: [String]
     cabalArgs =
-      -- - not sure why it is necessary to mention the smuggler package explicitly,
+      -- - not sure why it is necessary to mention the smuggler2 package explicitly,
       --   but it appears to be hidden otherwise.
       -- - This puts the .imports files that smuggler generates somewhere they
       --   can easily be found
@@ -95,14 +95,14 @@ compile testcase opts = do
         "exec",
         ghc,
         "--",
-        "-package smuggler",
+        "-package smuggler2",
         "-v0",
         "-dumpdir=" ++ testDir,
         "-fno-code",
-        "-fplugin=Smuggler.Plugin"
+        "-fplugin=Smuggler2.Plugin"
       ]
         ++ map
-          ("-fplugin-opt=Smuggler.Plugin:" ++)
+          ("-fplugin-opt=Smuggler2.Plugin:" ++)
           ( let ia = importAction opts
                 ea = exportAction opts
                 p = [show ia, show ea]

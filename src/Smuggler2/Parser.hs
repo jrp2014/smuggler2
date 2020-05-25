@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-module Smuggler.Parser
+module Smuggler2.Parser
   ( runParser
   )
 where

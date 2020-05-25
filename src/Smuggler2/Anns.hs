@@ -1,4 +1,4 @@
-module Smuggler.Anns
+module Smuggler2.Anns
   ( mkLIEVarFromNameT,
     addExportDeclAnnT,
     addCommaT,

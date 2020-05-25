@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Smuggler.Plugin
+module Smuggler2.Plugin
   ( plugin,
   )
 where
@@ -24,12 +24,12 @@ import Plugins (CommandLineOption, Plugin (pluginRecompile, typeCheckResultActio
                 purePlugin)
 import RdrName (GlobalRdrEnv, globalRdrEnvElts, gresToAvailInfo, isLocalGRE)
 import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports)
-import Smuggler.Anns (addCommaT, addExportDeclAnnT, mkLIEVarFromNameT, mkLoc, mkParenT)
-import Smuggler.Options (ExportAction (AddExplicitExports, NoExportProcessing, ReplaceExports),
+import Smuggler2.Anns (addCommaT, addExportDeclAnnT, mkLIEVarFromNameT, mkLoc, mkParenT)
+import Smuggler2.Options (ExportAction (AddExplicitExports, NoExportProcessing, ReplaceExports),
                          ImportAction (MinimiseImports, NoImportProcessing),
                          Options (exportAction, importAction, newExtension),
                          parseCommandLineOptions)
-import Smuggler.Parser (runParser)
+import Smuggler2.Parser (runParser)
 import StringBuffer (StringBuffer (StringBuffer), lexemeToString)
 import System.Directory (removeFile)
 import System.FilePath ((-<.>), (</>))

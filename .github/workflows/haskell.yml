@@ -1,4 +1,4 @@
-name: Smuggler
+name: Smuggler2
 
 on:
   push:
@@ -59,8 +59,8 @@ jobs:
       - name: Build dependencies
         run: cabal build --only-dependencies --write-ghc-environment-files=always
 
-      - name: Build Smuggler
+      - name: Build Smuggler2
         run: cabal build
 
       - name: Run tests
-        run: cabal -j2 test
+        run: cabal test

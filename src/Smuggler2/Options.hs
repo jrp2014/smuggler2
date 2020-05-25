@@ -1,4 +1,4 @@
-module Smuggler.Options
+module Smuggler2.Options
   ( Options (..),
     parseCommandLineOptions,
     ImportAction (..),
