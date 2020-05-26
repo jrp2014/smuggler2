@@ -149,7 +149,7 @@ $ cabal run smuggler-test -- --help
 For example, if you are running on `ghc-8.6.5` you can
 
 ```shell
-$ cabal run smuggler-test -- --accept
+$ cabal run smuggler2-test -- --accept
 ```
 
 to update the golden outputs to the current results of (failing) tests.

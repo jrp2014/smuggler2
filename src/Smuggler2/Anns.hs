@@ -1,49 +1,108 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module Smuggler2.Anns
-  ( mkLIEVarFromNameT,
+  ( mkExportAnnT,
+    mkLIEVarFromNameT,
     addExportDeclAnnT,
     addCommaT,
     mkLoc,
     mkParenT,
     setAnnsForT,
-    swapEntryDPT
+    swapEntryDPT,
   )
 where
 
+import Avail
 import Data.Generics as SYB (Data)
 import qualified Data.Map.Strict as Map (alter, fromList, insert, lookup, toList, union)
 import Data.Maybe (fromMaybe)
-import GHC (AnnKeywordId (AnnCloseP, AnnComma, AnnOpenP, AnnVal), GhcPs, IE (IEVar),
-            IEWrappedName (..), Name)
-import Language.Haskell.GHC.ExactPrint (Annotation (annEntryDelta, annPriorComments, annsDP),
-                                        TransformT, addSimpleAnnT, modifyAnnsT, uniqueSrcSpanT)
-import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (..), KeywordId (G), annNone, mkAnnKey,
-                                              noExt)
+import GHC
+  ( AnnKeywordId (AnnCloseP, AnnComma, AnnDotdot, AnnOpenP, AnnVal),
+    GhcPs,
+    IE (..),
+    IEWrappedName (..),
+    Name,
+  )
+import Language.Haskell.GHC.ExactPrint
+  ( Annotation (annEntryDelta, annPriorComments, annsDP),
+    TransformT,
+    addSimpleAnnT,
+    modifyAnnsT,
+    uniqueSrcSpanT,
+  )
+import Language.Haskell.GHC.ExactPrint.Types
+  ( DeltaPos (..),
+    KeywordId (G),
+    annNone,
+    mkAnnKey,
+    noExt,
+  )
+import Name (getOccString)
 import OccName (HasOccName (occName), OccName (occNameFS))
 import RdrName (mkVarUnqual)
 import SrcLoc (GenLocated (L), Located)
 
-{-
--- explicit version
-mkLIEVarFromNameT :: Monad m => Name -> TransformT m (Located (IE GhcPs))
-mkLIEVarFromNameT name = do
-  -- Could use only one loc as it would be used on different constructors
-  -- and not, therefore, get overwritten on subsequent uses.
-  locIEVar <- uniqueSrcSpanT
-  locIEName <- uniqueSrcSpanT
-  locUnqual <- uniqueSrcSpanT
-  return $
-    L
-      locIEVar
-      ( IEVar
-          noExt
-          ( L
-              locIEName
-              (IEName (L locUnqual (mkVarUnqual ((occNameFS . occName) name))))
-          )
-      )
--}
+-- | Uses 'AvailInfo' about an exportable thing to generate the corresponding
+-- piece of (annotated) AST
+mkExportAnnT :: Monad m => AvailInfo -> TransformT m (Located (IE GhcPs))
+-- Ordinary identifier
+mkExportAnnT (Avail name) = do
+  lname <-
+    mkLocWithAnns
+      (mkVarUnqual ((occNameFS . occName) name))
+      (DP (1, 2))
+      [(G AnnVal, DP (0, 0))]
+  liename <- mkLoc (IEName lname)
+  mkLoc (IEVar noExt liename)
+
+-- A type or class
+mkExportAnnT (AvailTC name names fieldlabels) = do
+  lname <-
+    mkLocWithAnns
+      (mkVarUnqual ((occNameFS . occName) name))
+      (DP (1, 2))
+      [(G AnnVal, DP (0, 0))]
+  liename <- mkLoc (IEName lname)
+
+  -- Could export pieces explicitly, but this becomes complicated;
+  -- operators need to be wrapped in (), etc, so just export things
+  -- with pieces by wildcard
+  let lienameWithWildcard =
+        mkLocWithAnns
+          (IEThingAll noExt liename)
+          (DP (0, 0))
+          [(G AnnOpenP, DP (0, 0)), (G AnnDotdot, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
+
+  case (names, fieldlabels) of
+    -- This case implies that the type or class is not to be in scope
+    -- which should not happen as we should only be processing exportable things
+    -- Alternativey, could just: mkLoc (IEThingAbs noExt liename)
+    ([], _) ->
+      error $
+        "smuggler: trying to export type class that is not to be in scope "
+          ++ getOccString name
+
+    -- A type class with no pieces
+    ([typeclass], []) -> mkLoc (IEThingAbs noExt liename)
+
+    -- A type class with no pieces, but with field selectors.  A record type?
+    ([typeclass], _fl) -> lienameWithWildcard
+
+    -- A type class with pieces
+    (typeorclass : _pieces, _fl) ->
+      if name == typeorclass -- check AvailTC invariant
+        then
+          lienameWithWildcard
+        else
+          error $
+            "smuggler: broken AvailTC invariant: "
+              ++ getOccString name
+              ++ "/="
+              ++ getOccString typeorclass
 
 -- Using mkLoc adds empty annotations too
+-- TODO:: Makes everything int an IEVar; do other cases
 mkLIEVarFromNameT :: Monad m => Name -> TransformT m (Located (IE GhcPs))
 mkLIEVarFromNameT name = do
   lname <- mkLoc (mkVarUnqual ((occNameFS . occName) name))
@@ -57,13 +116,6 @@ mkLIEVarFromNameT name = do
 addExportDeclAnnT :: Monad m => Located (IE GhcPs) -> TransformT m ()
 addExportDeclAnnT (L _ (IEVar _ (L _ (IEName x)))) =
   addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
-{-
- -- Comment this out for now, so that it breaks if there is an interesting case
-addExportDeclAnnT (L _ (IEVar _ (L _ (IEPattern x)))) =
-  addSimpleAnnT x (DP (1, 2)) [(G AnnPattern, DP (0, 0))] -- TODO:: check that AnnPattern is correct
-addExportDeclAnnT (L _ (IEVar _ (L _ (IEType x)))) =
-  addSimpleAnnT x (DP (1, 2)) [(G AnnType, DP (0, 0))] -- TODO:: check that AnnType is correct
--}
 
 -- mkParentT is used instead
 addCommaT :: Monad m => Located (IE GhcPs) -> TransformT m ()
@@ -82,12 +134,24 @@ addParensT x =
 -------------------------------------------------------------------------------
 -- From retrie
 
+-- | Generates a unique location and wraps the given ast chunk with that location
+-- Also adds a DP and an annotation at that location
+mkLocWithAnns :: (Data e, Monad m) => e -> DeltaPos -> [(KeywordId, DeltaPos)] -> TransformT m (Located e)
+mkLocWithAnns e dp anns = do
+  le <- L <$> uniqueSrcSpanT <*> pure e
+  setAnnsForT le dp anns
+
 -- | `mkLoc` generates a unique location and wraps the given ast chunk with that location
 -- Also adds an empty annotation at that location
 mkLoc :: (Data e, Monad m) => e -> TransformT m (Located e)
-mkLoc e = do
-  le <- L <$> uniqueSrcSpanT <*> pure e
-  setAnnsForT le []
+mkLoc e = mkLocWithAnns e (DP (0, 0)) []
+
+--
+
+-- | `mkLoc` generates a unique location and wraps the given ast chunk with that location
+-- Also adds an empty annotation at that location
+mkLocDP :: (Data e, Monad m) => e -> DeltaPos -> TransformT m (Located e)
+mkLocDP e dp = mkLocWithAnns e dp []
 
 -- | Add an open and close paren annotation to a located thing
 mkParenT ::
@@ -97,23 +161,24 @@ mkParenT ::
   TransformT m (Located x)
 mkParenT k e = do
   pe <- mkLoc (k e)
-  -- There may be some other way of getting gap in front of the paren?
-  _ <- setAnnsForT pe [(G GHC.AnnOpenP, DP (0, 1)), (G GHC.AnnCloseP, DP (0, 1))]
+  _ <- setAnnsForT pe (DP (0, 0)) [(G GHC.AnnOpenP, DP (0, 1)), (G GHC.AnnCloseP, DP (0, 1))]
   swapEntryDPT e pe
   return pe
 
 setAnnsForT ::
   (Data e, Monad m) =>
   Located e ->
+  DeltaPos ->
   [(KeywordId, DeltaPos)] ->
   TransformT m (Located e)
-setAnnsForT e anns = modifyAnnsT (Map.alter f (mkAnnKey e)) >> return e
+setAnnsForT e dp anns = modifyAnnsT (Map.alter f (mkAnnKey e)) >> return e
   where
-    f Nothing = Just annNone {annsDP = anns}
+    f Nothing = Just annNone {annEntryDelta = dp, annsDP = anns}
     f (Just a) =
       Just
         a
-          { annsDP =
+          { annEntryDelta = dp,
+            annsDP =
               Map.toList $
                 Map.union (Map.fromList anns) (Map.fromList (annsDP a))
           }

@@ -24,7 +24,7 @@ import Plugins (CommandLineOption, Plugin (pluginRecompile, typeCheckResultActio
                 purePlugin)
 import RdrName (GlobalRdrEnv, globalRdrEnvElts, gresToAvailInfo, isLocalGRE)
 import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports)
-import Smuggler2.Anns (addCommaT, addExportDeclAnnT, mkLIEVarFromNameT, mkLoc, mkParenT)
+import Smuggler2.Anns (addCommaT, addExportDeclAnnT, mkLIEVarFromNameT, mkLoc, mkParenT, mkExportAnnT)
 import Smuggler2.Options (ExportAction (AddExplicitExports, NoExportProcessing, ReplaceExports),
                          ImportAction (MinimiseImports, NoImportProcessing),
                          Options (exportAction, importAction, newExtension),
@@ -130,8 +130,9 @@ smugglerPlugin clopts modSummary tcEnv
             exportable :: GlobalRdrEnv -> [AvailInfo]
             exportable rdr_env =
               -- The same as (module M) where M is the current module name,
-              -- so that's how we handle it, except we also export the data amily
+              -- so that's how we handle it, except we also export the data family
               -- when a data instance is exported.
+              -- TODO: investigate whether nubAvails is needed
               map fix_faminst . gresToAvailInfo
                 . filter isLocalGRE
                 . globalRdrEnvElts
@@ -187,26 +188,15 @@ smugglerPlugin clopts modSummary tcEnv
                 currentExplicitExports :: Maybe (Located [LIE GhcPs])
                 currentExplicitExports = hsmodExports hsMod
 
-                names :: [Name]
-                names = reverse $ mkNamesFromAvailInfos exports -- TODO check the ordering
-
-                -- Produces all names from the availability information (including overloaded selectors)
-                -- To exclude overloaded selector use availNames
-                mkNamesFromAvailInfos :: Avails -> [Name]
-                mkNamesFromAvailInfos = concatMap availNamesWithSelectors
-
                 -- This does all the export replacement work
                 result :: Monad m => TransformT m ParsedSource
                 result
-                  | null names = return t
+                  | null exports = return t -- there is nothing exportable
                   | otherwise = do
                     -- Generate the exports list
-                    exportsList <- mapM mkLIEVarFromNameT names
-                    -- add further annotations
-                    mapM_ addExportDeclAnnT exportsList
+                    exportsList <- mapM mkExportAnnT (reverse exports ) -- TODO:: remove the reverse
+                    -- add commas in between and parens around
                     mapM_ addCommaT (init exportsList)
-
-                    -- Add the parens
                     lExportsList <- mkLoc exportsList >>= mkParenT unLoc
 
                     -- No need to do any graftTing here as we have been modifying the
