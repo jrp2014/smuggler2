@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies #-}
-
 module Smuggler2.Anns
   ( mkExportAnnT,
     mkLoc,
@@ -20,7 +17,11 @@ import GHC
     GhcPs,
     IE (..),
     IEWrappedName (..),
+    LIEWrappedName,
+    Name,
+    RdrName,
   )
+import GhcPlugins (GenLocated (L), Located, getOccFS, getOccString, mkVarUnqual)
 import Language.Haskell.GHC.ExactPrint
   ( Annotation (annEntryDelta, annPriorComments, annsDP),
     TransformT,
@@ -35,34 +36,36 @@ import Language.Haskell.GHC.ExactPrint.Types
     mkAnnKey,
     noExt,
   )
-import Name (getOccString)
-import OccName (HasOccName (occName), OccName (occNameFS))
-import RdrName (mkVarUnqual)
-import SrcLoc (GenLocated (L), Located)
+import Lexeme (isLexSym)
+
+-- Generates the annotations for a name, wrapping () around symbollic names
+mkLIEName :: Monad m => Name -> TransformT m (LIEWrappedName RdrName)
+mkLIEName name = do
+  let nameFS = getOccFS name
+  let ann =
+        if isLexSym nameFS -- infix type or data constructor / identifier
+          then [(G AnnOpenP, DP (0, 0)), (G AnnVal, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
+          else [(G AnnVal, DP (0, 0))]
+  lname <-
+    mkLocWithAnns
+      (mkVarUnqual nameFS)
+      (DP (1, 2)) -- drop downn a line and indent 2 spaces
+      ann
+  mkLoc (IEName lname)
 
 -- | Uses 'AvailInfo' about an exportable thing to generate the corresponding
 -- piece of (annotated) AST
+-- TODO:: refactor to take out common parts
 mkExportAnnT :: Monad m => AvailInfo -> TransformT m (Located (IE GhcPs))
 -- Ordinary identifier
 mkExportAnnT (Avail name) = do
-  lname <-
-    mkLocWithAnns
-      (mkVarUnqual ((occNameFS . occName) name))
-      (DP (1, 2))
-      [(G AnnVal, DP (0, 0))]
-  liename <- mkLoc (IEName lname)
+  liename <- mkLIEName name
   mkLoc (IEVar noExt liename)
 
 -- A type or class.  Since we expect @name@ to be in scope, it should be the head
 -- of @names@
 mkExportAnnT (AvailTC name names fieldlabels) = do
-  lname <-
-    mkLocWithAnns
-      (mkVarUnqual ((occNameFS . occName) name))
-      (DP (1, 2)) -- drop dowwn a line, and indent 2 spaces
-      [(G AnnVal, DP (0, 0))]
-
-  liename <- mkLoc (IEName lname)
+  liename <- mkLIEName name
 
   -- Could export pieces explicitly, but this becomes complicated;
   -- operators need to be wrapped in (), etc, so just export things
