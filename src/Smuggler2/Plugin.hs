@@ -5,14 +5,14 @@ module Smuggler2.Plugin
   )
 where
 
-import Avail (AvailInfo (AvailTC), Avails, availNamesWithSelectors)
+import Avail (AvailInfo (AvailTC), Avails)
 import Control.Monad (unless)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import DynFlags (DynFlags (dumpDir), HasDynFlags (getDynFlags))
 import GHC (GenLocated (L), GhcPs, HsModule (hsmodExports, hsmodImports),
             ImportDecl (ideclHiding, ideclImplicit), LIE, LImportDecl, Located,
-            ModSummary (ms_hspp_buf, ms_hspp_file, ms_mod), Module (moduleName), Name, ParsedSource,
+            ModSummary (ms_hspp_buf, ms_hspp_file, ms_mod), Module (moduleName), ParsedSource,
             moduleNameString, unLoc)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import IOEnv (readMutVar)
@@ -24,11 +24,11 @@ import Plugins (CommandLineOption, Plugin (pluginRecompile, typeCheckResultActio
                 purePlugin)
 import RdrName (GlobalRdrEnv, globalRdrEnvElts, gresToAvailInfo, isLocalGRE)
 import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports)
-import Smuggler2.Anns (addCommaT, addExportDeclAnnT, mkLIEVarFromNameT, mkLoc, mkParenT, mkExportAnnT)
+import Smuggler2.Anns (addCommaT, mkExportAnnT, mkLoc, mkParenT)
 import Smuggler2.Options (ExportAction (AddExplicitExports, NoExportProcessing, ReplaceExports),
-                         ImportAction (MinimiseImports, NoImportProcessing),
-                         Options (exportAction, importAction, newExtension),
-                         parseCommandLineOptions)
+                          ImportAction (MinimiseImports, NoImportProcessing),
+                          Options (exportAction, importAction, newExtension),
+                          parseCommandLineOptions)
 import Smuggler2.Parser (runParser)
 import StringBuffer (StringBuffer (StringBuffer), lexemeToString)
 import System.Directory (removeFile)
@@ -37,6 +37,7 @@ import System.IO (IOMode (WriteMode), withFile)
 import TcRnTypes (RnM,
                   TcGblEnv (tcg_exports, tcg_rdr_env, tcg_rn_exports, tcg_rn_imports, tcg_used_gres),
                   TcM)
+
 
 plugin :: Plugin
 plugin =
@@ -132,7 +133,7 @@ smugglerPlugin clopts modSummary tcEnv
               -- The same as (module M) where M is the current module name,
               -- so that's how we handle it, except we also export the data family
               -- when a data instance is exported.
-              -- TODO: investigate whether nubAvails is needed
+              -- TODO: investigate whether nubAvails is needed in our use case
               map fix_faminst . gresToAvailInfo
                 . filter isLocalGRE
                 . globalRdrEnvElts
@@ -194,7 +195,7 @@ smugglerPlugin clopts modSummary tcEnv
                   | null exports = return t -- there is nothing exportable
                   | otherwise = do
                     -- Generate the exports list
-                    exportsList <- mapM mkExportAnnT (reverse exports ) -- TODO:: remove the reverse
+                    exportsList <- mapM mkExportAnnT exports
                     -- add commas in between and parens around
                     mapM_ addCommaT (init exportsList)
                     lExportsList <- mkLoc exportsList >>= mkParenT unLoc

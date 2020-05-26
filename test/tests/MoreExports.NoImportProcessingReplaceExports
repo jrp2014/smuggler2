@@ -1,13 +1,13 @@
 module MoreExports (
-  main,
-  foo,
-  N,
-  D,
+  H,
   R,
-  H(..) ) where
+  D,
+  N,
+  foo,
+  main ) where
 
-
-
+--Another comment
+--
 
 newtype N a = Int a
 
@@ -20,7 +20,7 @@ data H = I | J | K deriving Show
 
 foo = (+1)
 
-
+-- A further  Comment
 
 main :: IO ()
 main = print J

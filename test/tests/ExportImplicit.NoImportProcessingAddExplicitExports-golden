@@ -1,7 +1,7 @@
 module Test.ExportImplicit (
-  main,
+  isExported,
   alsoExported,
-  isExported ) where
+  main ) where
 
 import Data.Char
 

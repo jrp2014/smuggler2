@@ -1,6 +1,6 @@
 module Test.ImplicitImportUnused (
-  bar,
-  foo ) where
+  foo,
+  bar ) where
 
 import Data.List
 import Data.Bool (not, (&&))

@@ -1,8 +1,8 @@
 module Test.ExportExplicit (
-  main,
-  andAnother,
+  isExported,
   anotherExport,
-  isExported ) where
+  andAnother,
+  main ) where
 
 isExported = (+1)
 

@@ -3,17 +3,15 @@
 
 module Smuggler2.Anns
   ( mkExportAnnT,
-    mkLIEVarFromNameT,
-    addExportDeclAnnT,
-    addCommaT,
     mkLoc,
+    addCommaT,
     mkParenT,
     setAnnsForT,
     swapEntryDPT,
   )
 where
 
-import Avail
+import Avail (AvailInfo (..))
 import Data.Generics as SYB (Data)
 import qualified Data.Map.Strict as Map (alter, fromList, insert, lookup, toList, union)
 import Data.Maybe (fromMaybe)
@@ -22,7 +20,6 @@ import GHC
     GhcPs,
     IE (..),
     IEWrappedName (..),
-    Name,
   )
 import Language.Haskell.GHC.ExactPrint
   ( Annotation (annEntryDelta, annPriorComments, annsDP),
@@ -56,13 +53,15 @@ mkExportAnnT (Avail name) = do
   liename <- mkLoc (IEName lname)
   mkLoc (IEVar noExt liename)
 
--- A type or class
+-- A type or class.  Since we expect @name@ to be in scope, it should be the head
+-- of @names@
 mkExportAnnT (AvailTC name names fieldlabels) = do
   lname <-
     mkLocWithAnns
       (mkVarUnqual ((occNameFS . occName) name))
-      (DP (1, 2))
+      (DP (1, 2)) -- drop dowwn a line, and indent 2 spaces
       [(G AnnVal, DP (0, 0))]
+
   liename <- mkLoc (IEName lname)
 
   -- Could export pieces explicitly, but this becomes complicated;
@@ -82,18 +81,14 @@ mkExportAnnT (AvailTC name names fieldlabels) = do
       error $
         "smuggler: trying to export type class that is not to be in scope "
           ++ getOccString name
-
     -- A type class with no pieces
-    ([typeclass], []) -> mkLoc (IEThingAbs noExt liename)
-
+    ([_typeclass], []) -> mkLoc (IEThingAbs noExt liename)
     -- A type class with no pieces, but with field selectors.  A record type?
-    ([typeclass], _fl) -> lienameWithWildcard
-
+    ([_typeclass], _fl) -> lienameWithWildcard
     -- A type class with pieces
     (typeorclass : _pieces, _fl) ->
       if name == typeorclass -- check AvailTC invariant
-        then
-          lienameWithWildcard
+        then lienameWithWildcard
         else
           error $
             "smuggler: broken AvailTC invariant: "
@@ -101,38 +96,8 @@ mkExportAnnT (AvailTC name names fieldlabels) = do
               ++ "/="
               ++ getOccString typeorclass
 
--- Using mkLoc adds empty annotations too
--- TODO:: Makes everything int an IEVar; do other cases
-mkLIEVarFromNameT :: Monad m => Name -> TransformT m (Located (IE GhcPs))
-mkLIEVarFromNameT name = do
-  lname <- mkLoc (mkVarUnqual ((occNameFS . occName) name))
-  liename <- mkLoc (IEName lname)
-  mkLoc (IEVar noExt liename)
-
--- TODO: This works for common cases (IEVar + IEName), but doesn't handle IEThingAbs,
--- IEThingWith, IEThingAll, IEModuleContents, IEGroup, IEDoc, IEDocNamed, XIE,
--- in all their IEName/IEPattAern and IEType variations.  But since it is only
--- creating a list of exportable things, perhaps that is OK.
-addExportDeclAnnT :: Monad m => Located (IE GhcPs) -> TransformT m ()
-addExportDeclAnnT (L _ (IEVar _ (L _ (IEName x)))) =
-  addSimpleAnnT x (DP (1, 2)) [(G AnnVal, DP (0, 0))]
-
--- mkParentT is used instead
-addCommaT :: Monad m => Located (IE GhcPs) -> TransformT m ()
-addCommaT x = addSimpleAnnT x (DP (0, 0)) [(G AnnComma, DP (0, 0))]
-
-{-
--- add an opening+closing parenthesis annotation.  mkParenT is used instead
-addParensT :: Monad m => Located [Located (IE GhcPs)] -> TransformT m ()
-addParensT x =
-  addSimpleAnnT
-    x
-    (DP (0, 1))
-    [(G AnnOpenP, DP (0, 0)), (G AnnCloseP, DP (0, 1))]
--}
-
 -------------------------------------------------------------------------------
--- From retrie
+-- Inspired by retrie
 
 -- | Generates a unique location and wraps the given ast chunk with that location
 -- Also adds a DP and an annotation at that location
@@ -146,12 +111,9 @@ mkLocWithAnns e dp anns = do
 mkLoc :: (Data e, Monad m) => e -> TransformT m (Located e)
 mkLoc e = mkLocWithAnns e (DP (0, 0)) []
 
---
-
--- | `mkLoc` generates a unique location and wraps the given ast chunk with that location
--- Also adds an empty annotation at that location
-mkLocDP :: (Data e, Monad m) => e -> DeltaPos -> TransformT m (Located e)
-mkLocDP e dp = mkLocWithAnns e dp []
+-- Add a comma yo a located Import/Export ast term
+addCommaT :: Monad m => Located (IE GhcPs) -> TransformT m ()
+addCommaT x = addSimpleAnnT x (DP (0, 0)) [(G AnnComma, DP (0, 0))]
 
 -- | Add an open and close paren annotation to a located thing
 mkParenT ::
