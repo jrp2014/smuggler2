@@ -1,7 +1,6 @@
 module Smuggler2.Anns
   ( mkExportAnnT,
     mkLoc,
-    addCommaT,
     mkParenT,
     setAnnsForT,
     swapEntryDPT,
@@ -13,7 +12,7 @@ import Data.Generics as SYB (Data)
 import qualified Data.Map.Strict as Map (alter, fromList, insert, lookup, toList, union)
 import Data.Maybe (fromMaybe)
 import GHC
-  ( AnnKeywordId (AnnCloseP, AnnComma, AnnDotdot, AnnOpenP, AnnVal),
+  ( AnnKeywordId (AnnCloseP, AnnDotdot, AnnOpenP, AnnVal),
     GhcPs,
     IE (..),
     IEWrappedName (..),
@@ -25,7 +24,6 @@ import GhcPlugins (GenLocated (L), Located, getOccFS, getOccString, mkVarUnqual)
 import Language.Haskell.GHC.ExactPrint
   ( Annotation (annEntryDelta, annPriorComments, annsDP),
     TransformT,
-    addSimpleAnnT,
     modifyAnnsT,
     uniqueSrcSpanT,
   )
@@ -91,13 +89,15 @@ mkExportAnnT (AvailTC name names fieldlabels) = do
     -- A type class with pieces
     (typeorclass : _pieces, _fl) ->
       if name == typeorclass -- check AvailTC invariant
-        then lienameWithWildcard
+        then
+            lienameWithWildcard
         else
           error $
             "smuggler: broken AvailTC invariant: "
               ++ getOccString name
               ++ "/="
               ++ getOccString typeorclass
+
 
 -------------------------------------------------------------------------------
 -- Inspired by retrie
@@ -113,10 +113,6 @@ mkLocWithAnns e dp anns = do
 -- Also adds an empty annotation at that location
 mkLoc :: (Data e, Monad m) => e -> TransformT m (Located e)
 mkLoc e = mkLocWithAnns e (DP (0, 0)) []
-
--- Add a comma yo a located Import/Export ast term
-addCommaT :: Monad m => Located (IE GhcPs) -> TransformT m ()
-addCommaT x = addSimpleAnnT x (DP (0, 0)) [(G AnnComma, DP (0, 0))]
 
 -- | Add an open and close paren annotation to a located thing
 mkParenT ::

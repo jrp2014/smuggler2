@@ -1,8 +1,8 @@
 module MoreExports (
-  H,
-  R,
-  D,
-  N,
+  H(..),
+  R(..),
+  D(..),
+  N(..),
   foo,
   main ) where
 

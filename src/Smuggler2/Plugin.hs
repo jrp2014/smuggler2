@@ -17,14 +17,14 @@ import GHC (GenLocated (L), GhcPs, HsModule (hsmodExports, hsmodImports),
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import IOEnv (readMutVar)
 import Language.Haskell.GHC.ExactPrint (Anns, TransformT, exactPrint, graftT, runTransform,
-                                        setEntryDPT)
+                                        setEntryDPT, addTrailingCommaT)
 import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (DP))
 import Outputable (Outputable (ppr), neverQualify, printForUser, vcat)
 import Plugins (CommandLineOption, Plugin (pluginRecompile, typeCheckResultAction), defaultPlugin,
                 purePlugin)
 import RdrName (GlobalRdrEnv, globalRdrEnvElts, gresToAvailInfo, isLocalGRE)
 import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports)
-import Smuggler2.Anns (addCommaT, mkExportAnnT, mkLoc, mkParenT)
+import Smuggler2.Anns (mkExportAnnT, mkLoc, mkParenT)
 import Smuggler2.Options (ExportAction (AddExplicitExports, NoExportProcessing, ReplaceExports),
                           ImportAction (MinimiseImports, NoImportProcessing),
                           Options (exportAction, importAction, newExtension),
@@ -197,7 +197,7 @@ smugglerPlugin clopts modSummary tcEnv
                     -- Generate the exports list
                     exportsList <- mapM mkExportAnnT exports
                     -- add commas in between and parens around
-                    mapM_ addCommaT (init exportsList)
+                    mapM_ addTrailingCommaT (init exportsList)
                     lExportsList <- mkLoc exportsList >>= mkParenT unLoc
 
                     -- No need to do any graftTing here as we have been modifying the
