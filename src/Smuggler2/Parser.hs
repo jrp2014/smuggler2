@@ -20,7 +20,7 @@ import Language.Haskell.GHC.ExactPrint.Parsers
 #if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
 import Outputable (text)
 #else
-import Outputable (showSDoc, text)
+import Outputable (ppr, showSDoc, text)
 #endif
 import TcRnTypes (RnM)
 
@@ -43,7 +43,7 @@ runParser dflags fileName fileContents = do
       printBagOfErrors dflags msg
 #else
       fatalErrorMsg dflags (text $ "smuggler parse failure: " ++
-                            showSDoc dflags (fst msg) ++ ": " ++ snd msg)
+                            showSDoc dflags (ppr $ fst msg) ++ ": " ++ snd msg)
 #endif
       return $ Left ()
     Right x -> return $ Right x
