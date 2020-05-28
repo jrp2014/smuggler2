@@ -30,11 +30,11 @@
 - [ ] remove / replace the orignial Data.Bool - based tests, which produce
   different results for ghc 8.6.5
 
-- [ ] Show a banner when the plug-in is invoked
+- [X ] Show a banner when the plug-in is invoked
 
 - [ ] Do a better job of preserving comments
 
-- [ ] Do a better job of rendering operators for export, or at least exclude
+- [X ] Do a better job of rendering operators for export, or at least exclude
   them
 
-- [ ] Stop smuggler2 errors being reported as GHC panics
+- [X] Stop smuggler2 errors being reported as GHC panics

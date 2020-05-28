@@ -7,14 +7,15 @@ where
 
 import DynFlags
     ( DynFlags, GeneralFlag(Opt_KeepRawTokenStream), gopt_set )
-import ErrUtils
+import ErrUtils ( fatalErrorMsg, printBagOfErrors )
 import GHC ( ParsedSource )
 import Language.Haskell.GHC.ExactPrint ( Anns )
 import Language.Haskell.GHC.ExactPrint.Parsers
     ( parseModuleFromStringInternal )
-import Outputable ( defaultUserStyle, text )
-import TcRnTypes
-import Control.Monad.IO.Class
+import Outputable ( text )
+import TcRnTypes ( RnM )
+import Control.Monad.IO.Class ( MonadIO(liftIO) )
+
 
 -- | Wrapper around the 'ghc-exactprint' parser.  Prints diagnostics for failed parses
 -- (which should never happen). We need to use 'parseModuleFromStringInternal'

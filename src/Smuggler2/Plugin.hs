@@ -5,12 +5,12 @@ module Smuggler2.Plugin
   )
 where
 
-import Avail (AvailInfo (AvailTC), Avails)
+import Avail (AvailInfo, Avails)
 import Control.Monad (unless)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Data.Maybe (fromMaybe, isNothing)
+import Data.Version (showVersion)
 import DynFlags (DynFlags (dumpDir), HasDynFlags (getDynFlags))
-import ErrUtils
+import ErrUtils (compilationProgressMsg, fatalErrorMsg)
 import GHC
   ( GenLocated (L),
     GhcPs,
@@ -26,7 +26,7 @@ import GHC
     unLoc,
   )
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import IOEnv (readMutVar)
+import IOEnv (MonadIO (liftIO), readMutVar)
 import Language.Haskell.GHC.ExactPrint
   ( Anns,
     TransformT,
@@ -37,14 +37,14 @@ import Language.Haskell.GHC.ExactPrint
     setEntryDPT,
   )
 import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (DP))
-import Outputable
+import Outputable (Outputable (ppr),  neverQualify, printForUser, text, vcat)
+import Paths_smuggler2 (version)
 import Plugins
   ( CommandLineOption,
     Plugin (pluginRecompile, typeCheckResultAction),
     defaultPlugin,
     purePlugin,
   )
-import RdrName (GlobalRdrEnv, globalRdrEnvElts, gresToAvailInfo, isLocalGRE)
 import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports)
 import Smuggler2.Anns (mkExportAnnT, mkLoc, mkParenT)
 import Smuggler2.Options
@@ -58,13 +58,12 @@ import StringBuffer (StringBuffer (StringBuffer), lexemeToString)
 import System.Directory (removeFile)
 import System.FilePath ((-<.>), (</>))
 import System.IO (IOMode (WriteMode), withFile)
+import TcRnExports (exports_from_avail)
 import TcRnTypes
   ( RnM,
-    TcGblEnv (tcg_exports, tcg_rdr_env, tcg_rn_exports, tcg_rn_imports, tcg_used_gres),
-    TcM, tcg_mod, tcg_imports, ImportAvails, env_gbl
+    TcGblEnv (tcg_exports, tcg_imports, tcg_mod, tcg_rdr_env, tcg_rn_exports, tcg_rn_imports, tcg_used_gres),
+    TcM,
   )
-import TcRnExports
-import IOEnv
 
 plugin :: Plugin
 plugin =
@@ -96,52 +95,64 @@ smugglerPlugin clopts modSummary tcEnv
     -- ... so short circuit if:
     -- - we are skipping import processing or there are no unused imports, and
     -- - we are skipping export processing or there are explict exports and we are not replacing them
-    -- (This is not a complete check; ideally, that the new imp/exports are different from the existing ones, etc)
-    if (importAction options == NoImportProcessing || noUnusedImports)
-      && (exportAction options == NoExportProcessing || (hasExplicitExports && exportAction options /= ReplaceExports))
+    -- (This is not a complete check; ideally, that the new imp/exports are
+    -- different from the existing ones, etc)
+    if (importAction options == NoImportProcessing || noUnusedImports) &&
+       (     exportAction options == NoExportProcessing
+         || (hasExplicitExports && exportAction options /= ReplaceExports)
+       )
       then return tcEnv
       else do
         dflags <- getDynFlags
-        liftIO $ logInfo dflags (defaultUserStyle dflags) (text "smuggler: <version>") -- TODO: get version from cabal
-        -- Dump a minimal set of imports
+        liftIO $ compilationProgressMsg dflags ("smuggler: " ++ showVersion version)
+
+        -- Dump GHC's view of what the minimal imports are for the current
+        -- module, so that they can be annotated when parsed back in
         let minImpFilePath = mkMinimalImportsPath dflags (ms_mod modSummary)
         printMinimalImports' dflags minImpFilePath usage
 
-        -- run smuggling only for its side effects
+        -- Run smuggling only for its side effects
         tcEnv <$ smuggling dflags minImpFilePath
+
   where
 
+    -- Does all the work
     smuggling :: DynFlags -> FilePath -> RnM ()
     smuggling dflags minImpFilePath = do
+
       let modulePath = ms_hspp_file modSummary
 
-      --  Read files as UTF-8 strings (GHC accepts only ASCII or UTF-8)
+      -- Read files as UTF-8 strings (GHC accepts only ASCII or UTF-8)
       liftIO $ setLocaleEncoding utf8
 
-      -- Get the pre-processed source code
+      -- Get the pre-processed module source code
       let modFileContents = case ms_hspp_buf modSummary of
             -- Not clear under what circumstances this could happen
             Nothing -> error $ "smuggler: missing source file: " ++ modulePath
             Just contents -> strBufToStr contents
 
-      -- parse the whole module
+      -- Parse the whole module
       runParser dflags modulePath modFileContents >>= \case
-        Left () -> pure () -- do nothing if file is invalid Haskell
+        Left () -> return () -- do nothing if file is invalid Haskell
         Right (annsHsMod, astHsMod) -> do
-          -- read the dumped file of minimal imports
+          -- Read the dumped file of minimal imports
           minImpFileContents <- liftIO $ readFile minImpFilePath
 
-          -- parse the minimal imports file
+          -- Parse the minimal imports file -- gets the annnotations too
           runParser dflags minImpFilePath minImpFileContents >>= \case
-            Left () -> error $ "smuggler: failed to parse minimal imports from " ++ minImpFilePath
+            Left () ->
+              liftIO $
+                fatalErrorMsg dflags (text $ "smuggler: failed to parse minimal imports from " ++ minImpFilePath)
             Right (annsImpMod, L _ impMod) -> do
+
               -- The actual minimal imports themselves, as generated by GHC
               let minImports = hsmodImports impMod
 
               -- What is exported by the module
-              exports <- if exportAction options == ReplaceExports
-                              then exportable 
-                              else return $ tcg_exports tcEnv -- what is currently exported
+              exports <-
+                if exportAction options == ReplaceExports
+                  then exportable
+                  else return $ tcg_exports tcEnv -- what is currently exported
 
               -- Bringing it all together: generate a new ast and annotations for it
               let (astHsMod', (annsHsMod', _locIndex), _log) =
@@ -155,42 +166,20 @@ smugglerPlugin clopts modSummary tcEnv
                 Nothing -> writeFile modulePath newContent
                 Just ext -> writeFile (modulePath -<.> ext) newContent
 
-            -- delete the GHC-generated imports file
-            --removeFile minImpFilePath
+            -- Clean up: delete the GHC-generated imports file
+              liftIO $ removeFile minImpFilePath
+
           where
 
-            -- This generates the things that are exportabe in the absence of a
-            -- an explict export header.
+            -- Generates the things that would be exportabe if there were no
+            -- explict export header, so suitable for replacing one
             exportable :: RnM [AvailInfo]
             exportable = do
               let rdr_env = tcg_rdr_env tcEnv
-              let imports = tcg_imports tcEnv  --  actually not needed for the Nothing case
+              let imports = tcg_imports tcEnv --  actually not needed for the Nothing case
               let this_mod = tcg_mod tcEnv
               exports <- exports_from_avail Nothing rdr_env imports this_mod
               return (snd exports)
-
-
-            -- | A cut down version of exports_from_avail in TcRnExports
-            -- Used because that operates in the RnM monad, whereas we are
-            -- working mainly in IO
-            exportable' :: GlobalRdrEnv -> [AvailInfo]
-            exportable' rdr_env =
-              -- The same as (module M) where M is the current module name,
-              -- so that's how we handle it, except we also export the data family
-              -- when a data instance is exported.
-              -- TODO: investigate whether nubAvails is needed in our use case
-              map fix_faminst . gresToAvailInfo
-                . filter isLocalGRE
-                . globalRdrEnvElts
-                $ rdr_env
-              where
-                fix_faminst (AvailTC n ns flds) =
-                  let new_ns =
-                        case ns of
-                          []      -> [n]
-                          (p : _) -> if p == n then ns else n : ns
-                   in AvailTC n new_ns flds
-                fix_faminst avail = avail
 
             --  | Replace a target module's imports
             --  See <https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs>
@@ -213,6 +202,7 @@ smugglerPlugin clopts modSummary tcEnv
                   unless (null imps) $ setEntryDPT (head imps) (DP (2, 0))
                   return $ L l m {hsmodImports = imps}
 
+            -- | Add explict exports to the target module
             addExplicitExports ::
               Monad m =>
               -- | The list of exports to be added
@@ -249,6 +239,9 @@ smugglerPlugin clopts modSummary tcEnv
                     -- annotations in the current transformation
                     return $ L astLoc hsMod {hsmodExports = Just lExportsList}
 
+    -- | This version of the GHC function ignores implicit imports, as they
+    -- cannot be parsed back in.  (There is an extraneous (implicit))
+    -- It also provides for leaving out instance-only imports (eg, Data.List() )
     printMinimalImports' :: DynFlags -> FilePath -> [ImportDeclUsage] -> RnM ()
     printMinimalImports' dflags filename imports_w_usage =
       do
