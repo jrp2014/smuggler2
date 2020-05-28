@@ -36,6 +36,7 @@ jobs:
       - name: Configure the build plan
         run: |
           cabal update
+          cabal gen-bounds
           cabal configure --upgrade-dependencies --enable-tests
 
       - name: Versions
