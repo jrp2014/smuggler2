@@ -35,7 +35,7 @@ runParser dflags fileName fileContents = do
       fatalErrorMsg dflags (text "smuggler parse failure:")
       printBagOfErrors dflags msg
 #else
-      fatalErrorMsg dflags (text "smuggler parse failure: " ++ msg)
+      fatalErrorMsg dflags (text $ "smuggler parse failure: " ++ msg)
 #endif
       return $ Left ()
     Right x -> return $ Right x
