@@ -43,7 +43,7 @@ runParser dflags fileName fileContents = do
       printBagOfErrors dflags msg
 #else
       fatalErrorMsg dflags (text $ "smuggler parse failure: " ++
-                            showSDoc (fst msg) ++ ": " ++ snd msg)
+                            showSDoc dflags (fst msg) ++ ": " ++ snd msg)
 #endif
       return $ Left ()
     Right x -> return $ Right x
