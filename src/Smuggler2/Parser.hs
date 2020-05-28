@@ -5,17 +5,24 @@ module Smuggler2.Parser
   )
 where
 
+import Control.Monad.IO.Class (MonadIO (liftIO))
 import DynFlags
-    ( DynFlags, GeneralFlag(Opt_KeepRawTokenStream), gopt_set )
-import ErrUtils ( fatalErrorMsg, printBagOfErrors )
-import GHC ( ParsedSource )
-import Language.Haskell.GHC.ExactPrint ( Anns )
+  ( DynFlags,
+    GeneralFlag (Opt_KeepRawTokenStream),
+    gopt_set,
+  )
+import ErrUtils (fatalErrorMsg, printBagOfErrors)
+import GHC (ParsedSource)
+import Language.Haskell.GHC.ExactPrint (Anns)
 import Language.Haskell.GHC.ExactPrint.Parsers
-    ( parseModuleFromStringInternal )
-import Outputable ( text )
-import TcRnTypes ( RnM )
-import Control.Monad.IO.Class ( MonadIO(liftIO) )
-
+  ( parseModuleFromStringInternal,
+  )
+#if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
+import Outputable (text)
+#else
+import Outputable (showSDoc, text)
+#endif
+import TcRnTypes (RnM)
 
 -- | Wrapper around the 'ghc-exactprint' parser.  Prints diagnostics for failed parses
 -- (which should never happen). We need to use 'parseModuleFromStringInternal'
@@ -35,7 +42,8 @@ runParser dflags fileName fileContents = do
       fatalErrorMsg dflags (text "smuggler parse failure:")
       printBagOfErrors dflags msg
 #else
-      fatalErrorMsg dflags (text $ "smuggler parse failure: " ++ msg)
+      fatalErrorMsg dflags (text $ "smuggler parse failure: " ++
+                            showSDoc (fst msg) ++ ": " ++ snd msg)
 #endif
       return $ Left ()
     Right x -> return $ Right x
