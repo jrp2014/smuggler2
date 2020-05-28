@@ -1,4 +1,4 @@
-# smuggler
+# smuggler2
 
 ![smuggler-logo](https://user-images.githubusercontent.com/4276606/45937457-c2715c00-bff2-11e8-9766-f91051d36ffe.png)
 

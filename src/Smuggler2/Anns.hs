@@ -65,7 +65,7 @@ mkExportAnnT (Avail name) = do
 mkExportAnnT (AvailTC name names fieldlabels) = do
   liename <- mkLIEName name
 
-  -- Could export pieces explicitly, but this becomes complicated;
+  -- Could export pieces explicitly, but this becomes ugly;
   -- operators need to be wrapped in (), etc, so just export things
   -- with pieces by wildcard
   let lienameWithWildcard =
