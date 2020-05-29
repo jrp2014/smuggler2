@@ -6,20 +6,15 @@ module Smuggler2.Parser
 where
 
 import Control.Monad.IO.Class (MonadIO (liftIO))
-import DynFlags
-  ( DynFlags,
-    GeneralFlag (Opt_KeepRawTokenStream),
-    gopt_set,
-  )
-import ErrUtils (fatalErrorMsg, printBagOfErrors)
+import DynFlags (DynFlags, GeneralFlag (Opt_KeepRawTokenStream), gopt_set)
 import GHC (ParsedSource)
 import Language.Haskell.GHC.ExactPrint (Anns)
-import Language.Haskell.GHC.ExactPrint.Parsers
-  ( parseModuleFromStringInternal,
-  )
+import Language.Haskell.GHC.ExactPrint.Parsers (parseModuleFromStringInternal)
 #if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
+import ErrUtils (fatalErrorMsg, printBagOfErrors)
 import Outputable (text)
 #else
+import ErrUtils (fatalErrorMsg)
 import Outputable (ppr, showSDoc, text)
 #endif
 import TcRnTypes (RnM)

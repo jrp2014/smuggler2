@@ -1,0 +1,8 @@
+module Duplicated where
+
+import Data.Char (isDigit, isSpace)
+import Data.Char (isPrint, isSpace)
+import Data.Char (isLetter, isSpace)
+
+
+test x = isDigit x || isLetter x

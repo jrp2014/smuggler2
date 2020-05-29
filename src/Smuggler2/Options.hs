@@ -10,12 +10,15 @@ import Data.Char (toLower)
 import Data.List (foldl')
 import Plugins (CommandLineOption)
 
+-- | Ways of performing import processing
 data ImportAction = NoImportProcessing | PreserveInstanceImports | MinimiseImports
   deriving (Eq, Show)
 
+-- | Ways of performing emport processing
 data ExportAction = NoExportProcessing | AddExplicitExports | ReplaceExports
   deriving (Eq, Show)
 
+-- | Internal representation of the plugin's command line options
 data Options = Options
   { importAction :: ImportAction,
     exportAction :: ExportAction,

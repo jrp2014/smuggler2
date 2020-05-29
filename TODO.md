@@ -27,9 +27,6 @@
 
 - [ ] refactor the much more sophisticated https://github.com/ddssff/refact-global-hse
 
-- [ ] remove / replace the orignial Data.Bool - based tests, which produce
-  different results for ghc 8.6.5
-
 - [X ] Show a banner when the plug-in is invoked
 
 - [ ] Do a better job of preserving comments

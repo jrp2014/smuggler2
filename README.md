@@ -17,35 +17,79 @@
 >
 > ― Amara Lakhous, Clash of Civilizations Over an Elevator in Piazza Vittorio
 
-Haskell Source Plugin which removes unused imports and adds explicit exports automatically.
+Smuggler2 is a Haskell Source Plugin that rewrites module imports (to produce a
+minimal set) and adds or replaces explicit exports automatically.
+
+This may make code easier to read because the provenance of imported 
+names is explcit.  While writing code, it may be convenient to import a complete
+library (by not specifiying what is to be imported from it) and then get
+Smuggler2 to limit the import to include only the names that are used.
+
+By default, all values, types and classes defined in a module
+are exported (excluding those that are imported). Smuggler2 can generate
+the code for that maximalist export list, for hand pruning.
+(It does not check whether an exported name is used.)  This approach may make it
+easier for `ghc` to optimise some code.
 
 ## How to use
 
-- Add `smuggler2` to the dependencies of your project, or,
-- if you have built `smuggler2` from a local copy of this repository and installed it
-  you may only need to add `-package smuggler2` to your `ghc-options`.  (You may
-  need to install using `cabal v1-install` for `smuggler2` to be recognised, at
-  least while there is no Hackage version available.)
+### Adding Smuggler2 to your dependencies
 
-Then add the following compiler options to your build configuration
-(eg, to `ghc-options` in your `.cabal` file):
+Add `smuggler2` to the dependencies of your project and to your compiler
+flags. For example, you could include in your project `cabal` file something
+like
 
+```Cabal
+flag smuggler2
+  description: Rewrite sources to cleanp imports, and create explicit exports
+  exports
+  default:     False
+  manual:      True
+
+common smuggler-options
+  if flag(smuggler2)
+    ghc-options: -fplugin:Smuggler2.Plugin
+    build-depends: smuggler2 >= 0.3
 ```
--fplugin=Smuggler2.Plugin
+
+and the `import: smuggler-options` in the appropriate `library` or `executable` sections.
+
+The use of the flag allows you to build with or without source processing. Eg,
+
+```bash
+$ cabal build -fsmuggler2
 ```
 
-Note that you will probably want to use a `cabal` flag or a separate build
-target to avoid applying `smuggler2` to your external dependencies.
+using the example above.
 
-The Plugin has serveral (case-insensitive) options, which can be set by adding a
-`-fplugin-opt=Smuggler2.Plugin:` compiler option to your build configuration:
+You might use this to refine your imports or get a starting point for your
+exports, but not rewrite them every time you compile. The use of a flag means
+that you can also exclude `smuggler2` dependencies from your final builds.
+
+### Alternatively, using a local version
+
+If you have installed `smuggler2` from a local copy of this repository,
+you may only need to add `-package smuggler2` to your `ghc-options`.
+
+```Cabal
+common smuggler-options
+  if flag(smuggler2)
+    ghc-options: -fplugin:Smuggler2.Plugin --package smuggler22
+```
+
+(You may need to install from a local copy using `cabal v1-install` for `smuggler2`
+to be recognised)
+
+### Options
+
+`Smuggler2` has serveral (case-insensitive) options, which can be set by adding a
+`-fplugin-opt=Smuggler2.Plugin:` to your `ghc-options`
 
 - `NoImportProcessing` - do no import processing
 - `PreserveInstanceImports` - remove unused imports, but preserve a library import stub.
   such as `import Mod ()`, to import only instances of typeclasses from it. (The default.)
-- `MinimiseImports` - remove unused imports, including any that may be needed to
-  import typeclass instances. This may, therefore, stop the module from compiling.
-
+- `MinimiseImports` - remove unused imports, including any that may be needed
+  only to import typeclass instances. This may, therefore, stop the module from compiling.
 - `NoExportProcessing` - do no export processing
 - `AddExplicitExports` - add an explicit list of all available exports (excluding
   those that are imported) if there is no existing export list. (The default.)
@@ -56,25 +100,33 @@ The Plugin has serveral (case-insensitive) options, which can be set by adding a
   available exports (which, again, you can, of course, then prune to your requirements).
 
 Any other option value is used to generate a source file with the option value used as
-a new extension rather than replacing the original file. For example,
+a new extension rather than replacing the original file (`new` in the following
+example)
 
-```
--fplugin-opt=Smuggler2.Plugin:new
+```Cabal
+    ghc-options: -fplugin:Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
 ```
 
-will create output files with a `.new` suffix rather the overwriting the originals.
+Thhis will create output files with a `.new` suffix rather the overwriting the originals.
 
 A lovely addition to this package is that it automatically supports on-the-fly
 feature if you use it with `ghcid`. Smuggler2 doesn't perform file changes when
 there are no unused imports. So you can just run `ghcid` as usual:
 
-```
+```bash
 ghcid --command='cabal repl'
 ```
 
 ## Caveats
 
-- By default `smuggler2` does not remove imports completely because an import may be being
+- `Smuggler2` rewrites the existing imports, rather than attempting to prune
+  them. This is a more aggressive approach than `smuggler` which focuses on
+  removing redundant imports.  This has advantages and disadvantages.  The
+  advantage is that a minimal set of imports is generated in a reproducable format.
+  The disdvantage is that imports may be reordered, comments dropped, external
+  or blank lines, internal imports mixed with external, etc.  
+
+- By default `Smuggler2` does not remove imports completely because an import may be being
   used to only import instances of typeclasses, So it will leave stubs like
 
   ```haskell
@@ -82,12 +134,12 @@ ghcid --command='cabal repl'
   ```
 
   that you may need to remove manually. Alternatively use the `MinimiseImports` option to
-  remove them anyway.
+  remove them anyway, at the risk of a compilation failure.
 
-- Any comments in the import block will be discarded. Similarly, blank lines in
-  in the import section will be discarded.
-
-- CPP files may not be processed correctly (fixed?)
+- CPP files may not be processed correctly: the imports will be generated by for
+  current CPP settings and any CPP annotations in the import block will be
+  discarded. This may be a particular problem if you are writing code for
+  several generations of `ghc` and `base` for example.
 
 - `smuggler2` depends on the current `ghc` compiler and `base` library to check
   whether an import is redundant. Earlier versions of the compiler may, of
@@ -95,20 +147,32 @@ ghcid --command='cabal repl'
   changelog](https://hackage.haskell.org/package/base/changelog) provides some
   details of what was made available when.
 
+- Multiple separate import lines referring to the same library are not
+  consolidated
+
 - Literate Haskell `lhs` files are not supported
 
 - `hiding` clauses may not be properly analysed
 
+- Certain syntax pattern imports may not be imported correctly (with the `pattern`
+  keyword)
+
 - The test suite does not seem to run reliably on Windows. This is probably
   more of an issue with the way that the tests are run, than `Smuggler2` itself.
+
+- Currently `cabal` does not have a particular way of specifying plugins.
+  (See, eg, https://gitlab.haskell.org/ghc/ghc/issues/11244 and
+  https://github.com/haskell/cabal/issues/2965)
 
 ## For contributors
 
 Requirements:
 
-- `ghc-8.6.5`, `ghc-8.8.3` and `ghc-8.10.1` Smuggler2 is untested with earlier versions.
-  and some of the tests fail on `ghc-8.6.5` because it needs to import `Data.Bool` whereas
-  later versions of GHC don't.
+- `ghc-8.6.5`, `ghc-8.8.3` and `ghc-8.10.1`: `Smuggler2` will not compile with earlier versions.
+- The test golden values are for `ghc-8.10.1` and `ghc-8.8.3`. Some of them fail on `ghc-8.6.5`
+  because it seems to need to import `Data.Bool` whereas later versions of GHC don't. The results
+  compile on `ghc-8.6.5` and later anyway, but the imports are not as minimal
+  for later versions as they could be.
 - `cabal >= 3.0` (ideally `3.2`)
 
 ### How to build
@@ -126,9 +190,6 @@ $ cabal bulid -fdebug
 
 Curently this just adds an `-fdump-minimal-imports` parameter to GHC
 compilation.
-
-
-
 
 ### How to run tests
 
@@ -217,7 +278,7 @@ syntax used to replace the existing export list, if any.
 
 ## Other projects
 
-- the original version of [`smuggler2`](https://hackage.haskell.org/package/smuggler) on which this one is based
+- Smuggler2 was is a rewrite of [`smuggler`](https://hackage.haskell.org/package/smuggler)
 - `retrie` a [code modding tool](https://hackage.haskell.org/package/retrie)
   that works with GHC 8.10.1
 - `refact-global-hse` an ambitious [import refactoring tool](https://github.com/ddssff/refact-global-hse).
@@ -226,3 +287,7 @@ syntax used to replace the existing export list, if any.
   [Terser import declarations](https://www.machinesung.com/scribbles/terser-import-declarations.html) and
   [GHC API](https://www.machinesung.com/scribbles/ghc-api.html) (The site
   doesn't always seem to be up.)
+## Acknowledgements
+Thanks to
+- Dmitrii Kovanikov and Veronika Romashkina who wrote [`smuggler`](https://hackage.haskell.org/package/smuggler)
+- The ghc authors who have made the compiler internals available through an API.
