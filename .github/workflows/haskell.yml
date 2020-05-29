@@ -4,7 +4,6 @@ on:
   push:
     branches: [master]
   pull_request:
-    branches: [master]
 
 jobs:
   build:
@@ -26,47 +25,32 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
 
-      - name: Setup Haskell and Cabal
-        uses: actions/setup-haskell@v1.1
+      - uses: actions/setup-haskell@v1.1
+        name: Setup Haskell
+        id: setup-haskell-cabal
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
 
-      - name: Configure the build plan
-        run: |
-          cabal update
-          cabal gen-bounds
-          cabal clean
-          cabal configure --upgrade-dependencies --enable-tests
+      - uses: actions/cache@v1
+        name: Cache cabal-store
+        with:
+          path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+          key: ${{ runner.os }}-cabal-${{ matrix.ghc-version }}-cabal
 
       - name: Versions
         run: |
           cabal --version
           ghc --version
+          cabal gen-bounds
 
-      - uses: actions/cache@v1
-        name: Cache dependencies
-        with:
-          path: '~/.cabal'
-          # The file `plan.json` contains the build information.
-          key: ${{ runner.os }}-cabal-${{ matrix.ghc-version }}-${{ matrix.cabal-version }}-${{ hashFiles('**/plan.json') }}
-
-      - uses: actions/cache@v1
-        name: Cache dist-newstyle
-        with:
-          path: dist-newstyle/build
-          key: ${{ runner.os }}-dist-${{ matrix.ghc-version }}-${{ matrix.cabal-version }}-${{ hashFiles('**/plan.json') }}
-
-      - name: Build dependencies
-        run: cabal build --only-dependencies --write-ghc-environment-files=always
-
-      - name: Build Smuggler2
+      - name: Build
         run: |
-           cabal build smuggler2
-           cabal install smuggler2
-           cabal build
-           cabal install
+          cabal update
+          cabal build all --enable-tests --write-ghc-environment-files=always
 
-      - name: Run tests
-        run: cabal test
+      - name: Test
+        run: |
+          cabal test test all --enable-tests
