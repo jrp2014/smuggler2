@@ -37,6 +37,7 @@ jobs:
         run: |
           cabal update
           cabal gen-bounds
+          cabal clean
           cabal configure --upgrade-dependencies --enable-tests
 
       - name: Versions
