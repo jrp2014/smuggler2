@@ -62,7 +62,11 @@ jobs:
         run: cabal build --only-dependencies --write-ghc-environment-files=always
 
       - name: Build Smuggler2
-        run: cabal build
+        run: |
+           cabal build smuggler2
+           cabal install smuggler2
+           cabal build
+           cabal install
 
       - name: Run tests
         run: cabal test
