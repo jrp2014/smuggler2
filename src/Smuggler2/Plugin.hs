@@ -1,5 +1,5 @@
 {-|
- Description: the core of 'Smuggler2'
+ Description: the core of 'smuggler2'
  -}
 {-# LANGUAGE LambdaCase #-}
 
