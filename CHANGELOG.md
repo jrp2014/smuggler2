@@ -1,36 +1,16 @@
 # Changelog
 
-`smuggler` uses [PVP Versioning][1].
+Notable changes to `Smuggler2`
+
+`smuggler2` uses [PVP Versioning][1].
 The change log is available [on GitHub][2].
 
-## Unreleased: 0.2.0.0
+## [Unreleased]
+- Nothing to report
 
-* [#39](https://github.com/kowainik/smuggler/issues/39):
-  Change files only when there're warnings. Remove `hash-store` dependencies and
-  a need to have local cache.
-* [#7](https://github.com/kowainik/smuggler/issues/7):
-  Remove trailing commas in imports.
-* [#30](https://github.com/kowainik/smuggler/issues/30):
-  Optimize whole import deletion.
-* [#57](https://github.com/kowainik/smuggler/issues/57):
-  Add tests for implicit imports.
-* [#59](https://github.com/kowainik/smuggler/issues/59):
-  Check if cache directory already exists before removing.
-* [#52](https://github.com/kowainik/smuggler/issues/52):
-  Use `ByteString` instead of `FilePath` in `Parser`.
-* Upgrade to GHC-8.6.5
-* Improve tests output.
+##  [0.3.2.1]: --  30 May 2020
+- Provisional version for Hackage
 
-## 0.1.0 — Sep 24, 2018
-
-* [#29](https://github.com/kowainik/smuggler/issues/29):
-  Improve documentation.
-* [#43](https://github.com/kowainik/smuggler/issues/43):
-  Remove `cabal.project` (there's no need in it anymore).
-
-## 0.0.0
-
-* Initially created.
 
 [1]: https://pvp.haskell.org
-[2]: https://github.com/kowainik/smuggler/releases
+[2]: https://github.com/jrp2014/smuggler2/releases
