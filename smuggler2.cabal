@@ -1,10 +1,10 @@
 cabal-version:      3.0
 name:               smuggler2
-version:            0.3.2.0
+version:            0.1.0.0
 synopsis:           GHC Source Plugin that helps to manage imports
 description:
   == Usage
-  Add @smuggler2@ to the dependencies of your project.
+  Add @smuggler2@ to the build dependencies of your project.
   .
   Then add the following to ghc-options: @-fplugin=Smuggler2.Plugin@
 
@@ -12,9 +12,9 @@ homepage:           https://github.com/kowainik/smuggler
 bug-reports:        https://github.com/kowainik/smuggler/issues
 license:            MPL-2.0
 license-file:       LICENSE
-author:             Dmitrii Kovanikov, Veronika Romashkina
+author:             jrp2014, Dmitrii Kovanikov, Veronika Romashkina
 maintainer:         Kowainik <xrom.xkov@gmail.com>
-copyright:          2018-2019 Kowainik
+copyright:          2020 jrp2014
 category:           Development, Refactoring
 build-type:         Simple
 extra-doc-files:

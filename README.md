@@ -290,4 +290,6 @@ syntax used to replace the existing export list, if any.
 ## Acknowledgements
 Thanks to
 - Dmitrii Kovanikov and Veronika Romashkina who wrote [`smuggler`](https://hackage.haskell.org/package/smuggler)
+- Alan Zimmerman and Matthew Pickering for
+  [`ghc-exactprint`](https://hackage.haskell.org/package/ghc-exactprint)
 - The ghc authors who have made the compiler internals available through an API.

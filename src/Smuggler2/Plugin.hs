@@ -108,6 +108,9 @@ smugglerPlugin clopts modSummary tcEnv
 
         -- Dump GHC's view of what the minimal imports are for the current
         -- module, so that they can be annotated when parsed back in
+        -- This is needed because 'getMinimalImports` returns a list of import
+        -- declarations that are `GhcRn` but `ghc-exactPrint` operates in
+        -- `GhcPs`
         let minImpFilePath = mkMinimalImportsPath dflags (ms_mod modSummary)
         printMinimalImports' dflags minImpFilePath usage
 
@@ -197,6 +200,8 @@ smugglerPlugin clopts modSummary tcEnv
                 NoImportProcessing -> return t
                 _ -> do
                   -- This does all the work
+                  -- retrie has a neat `insertImports' function that also
+                  -- deduplicates
                   imps <- graftT anns minImports
                   -- nudge down the imports list onto a new line
                   unless (null imps) $ setEntryDPT (head imps) (DP (2, 0))
