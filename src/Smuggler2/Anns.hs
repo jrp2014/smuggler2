@@ -1,3 +1,7 @@
+{-|
+ Description: Utility functions for transforming and manipulating 'ghc' AST elements
+              and their associated 'ghc-exactprint' 'Language.Haskell.GHC.ExactPrint.Anns'
+ -}
 module Smuggler2.Anns
   ( mkExportAnnT,
     mkLoc,
@@ -53,7 +57,6 @@ mkLIEName name = do
 
 -- | Uses 'AvailInfo' about an exportable thing to generate the corresponding
 -- piece of (annotated) AST
--- TODO:: refactor to take out common parts
 mkExportAnnT :: Monad m => AvailInfo -> TransformT m (Located (IE GhcPs))
 -- Ordinary identifier
 mkExportAnnT (Avail name) = do
@@ -126,6 +129,7 @@ mkParenT k e = do
   swapEntryDPT e pe
   return pe
 
+-- | Set the `ghc-exactprint` annotations for a 'Located' thing
 setAnnsForT ::
   (Data e, Monad m) =>
   Located e ->
@@ -144,6 +148,7 @@ setAnnsForT e dp anns = modifyAnnsT (Map.alter f (mkAnnKey e)) >> return e
                 Map.union (Map.fromList anns) (Map.fromList (annsDP a))
           }
 
+-- | Swap two 'Located' things' relative position tage ('DeltaPos')
 swapEntryDPT ::
   (Data a, Data b, Monad m) => Located a -> Located b -> TransformT m ()
 swapEntryDPT a b = modifyAnnsT $ \anns ->

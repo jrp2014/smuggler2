@@ -1,35 +1,27 @@
 # smuggler2
 
-![smuggler-logo](https://user-images.githubusercontent.com/4276606/45937457-c2715c00-bff2-11e8-9766-f91051d36ffe.png)
-
 <!--
-[![Hackage](https://img.shields.io/hackage/v/smuggler.svg?logo=haskell)](https://hackage.haskell.org/package/smuggler)
+[![Hackage](https://img.shields.io/hackage/v/smuggler.svg?logo=haskell)](https://hackage.haskell.org/package/smuggler2)
 [![Build](https://img.shields.io/travis/kowainik/smuggler.svg?logo=travis)](http://travis-ci.org/kowainik/smuggler)
 -->
 
-[![MPL-2.0 license](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/kowainik/smuggler/blob/master/LICENSE)
-![Github CI](https://github.com/jrp2014/smuggler/workflows/Smuggler2/badge.svg)
+[![MPL-2.0 license](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/jrp2014/smuggler2/blob/master/LICENSE)
+![Smuggler2](https://github.com/jrp2014/smuggler2/workflows/Smuggler2/badge.svg)
+[![Build Status](https://travis-ci.com/jrp2014/smuggler2.svg?branch=master)](https://travis-ci.com/jrp2014/smuggler2)
 
-> “So many people consider their work a daily punishment. Whereas I love my work
-> as a translator. Translation is a journey over a sea from one shore to the
-> other. Sometimes I think of myself as a smuggler: I cross the frontier of
-> language with my booty of words, ideas, images, and metaphors.”
->
-> ― Amara Lakhous, Clash of Civilizations Over an Elevator in Piazza Vittorio
-
-Smuggler2 is a Haskell Source Plugin that rewrites module imports (to produce a
+Smuggler2 is a Haskell GHC Source Plugin that rewrites module imports (to produce a
 minimal set) and adds or replaces explicit exports automatically.
 
-This may make code easier to read because the provenance of imported 
-names is explcit.  While writing code, it may be convenient to import a complete
-library (by not specifiying what is to be imported from it) and then get
+This may make code easier to read because the provenance of imported
+names is explcit. While writing code, it may be convenient to import a complete
+module (by not specifiying what is to be imported from it) and then get
 Smuggler2 to limit the import to include only the names that are used.
 
 By default, all values, types and classes defined in a module
 are exported (excluding those that are imported). Smuggler2 can generate
-the code for that maximalist export list, for hand pruning.
-(It does not check whether an exported name is used.)  This approach may make it
-easier for `ghc` to optimise some code.
+the code for that maximalist export list, for hand pruning. (It does not check
+whether an exported name is used.) Limiting exports may make it easier for
+`ghc` to optimise some code.
 
 ## How to use
 
@@ -62,7 +54,7 @@ $ cabal build -fsmuggler2
 
 using the example above.
 
-You might use this to refine your imports or get a starting point for your
+You might use this approach to refine your imports or get a starting point for your
 exports, but not rewrite them every time you compile. The use of a flag means
 that you can also exclude `smuggler2` dependencies from your final builds.
 
@@ -78,11 +70,11 @@ common smuggler-options
 ```
 
 (You may need to install from a local copy using `cabal v1-install` for `smuggler2`
-to be recognised)
+to be recognised.)
 
 ### Options
 
-`Smuggler2` has serveral (case-insensitive) options, which can be set by adding a
+`Smuggler2` has several (case-insensitive) options, which can be set by adding a
 `-fplugin-opt=Smuggler2.Plugin:` to your `ghc-options`
 
 - `NoImportProcessing` - do no import processing
@@ -90,6 +82,7 @@ to be recognised)
   such as `import Mod ()`, to import only instances of typeclasses from it. (The default.)
 - `MinimiseImports` - remove unused imports, including any that may be needed
   only to import typeclass instances. This may, therefore, stop the module from compiling.
+
 - `NoExportProcessing` - do no export processing
 - `AddExplicitExports` - add an explicit list of all available exports (excluding
   those that are imported) if there is no existing export list. (The default.)
@@ -99,32 +92,46 @@ to be recognised)
 - `ReplaceExports` - replace any existing module export list with one containing all
   available exports (which, again, you can, of course, then prune to your requirements).
 
-Any other option value is used to generate a source file with the option value used as
-a new extension rather than replacing the original file (`new` in the following
-example)
+Any other option value is used to generate a source file with a new extension of
+the option value (`new` in the following example) rather than replacing the original file.
 
 ```Cabal
     ghc-options: -fplugin:Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
 ```
 
-Thhis will create output files with a `.new` suffix rather the overwriting the originals.
+This will create output files with a `.new` suffix rather the overwriting the originals.
 
-A lovely addition to this package is that it automatically supports on-the-fly
-feature if you use it with `ghcid`. Smuggler2 doesn't perform file changes when
-there are no unused imports. So you can just run `ghcid` as usual:
+Smuggler2 tries not to perform file changes when
+there are no unused imports or exports to be added or replaced.
+So you can just run `ghcid` as usual:
 
 ```bash
 ghcid --command='cabal repl'
 ```
 
+If you add `-v` to your `ghc-options`
+
 ## Caveats
 
+`Smugggler2` is robust -- it can chew through the
+[agda](https://github.com/agda/agda) codebase of over 370 modules with complex
+interdependencies and be tripped over by only
+- a handful of pattern synonym imports,
+- a couple of ambiguous exports (are we trying to export something
+defined in the current module or something with the same name from an imported
+module)
+- and a couple of imports where both qualifed and unqualifed version of the
+  module are imported and there are references to both qualified and unqualifed
+  version of the same names
+
+But there are some caveats, most of which are either easy enough to work around
+(and still benefit from a great reduction in keyboard work):
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
-  them. This is a more aggressive approach than `smuggler` which focuses on
-  removing redundant imports.  This has advantages and disadvantages.  The
+  them. (This is a more aggressive approach than `smuggler` which focuses on
+  removing redundant imports.) It has advantages and disadvantages. The
   advantage is that a minimal set of imports is generated in a reproducable format.
-  The disdvantage is that imports may be reordered, comments dropped, external
-  or blank lines, internal imports mixed with external, etc.  
+  The disdvantage is that imports may be reordered, comments and blankdropped, external
+  imports mixed with external, etc.
 
 - By default `Smuggler2` does not remove imports completely because an import may be being
   used to only import instances of typeclasses, So it will leave stubs like
@@ -133,13 +140,18 @@ ghcid --command='cabal repl'
   import Mod ()
   ```
 
-  that you may need to remove manually. Alternatively use the `MinimiseImports` option to
-  remove them anyway, at the risk of a compilation failure.
+  that you may want to remove manually. Alternatively use the `MinimiseImports` option to
+  remove them anyway, at the risk of producing code that fails to compile.
 
-- CPP files may not be processed correctly: the imports will be generated by for
+- CPP files will not be processed correctly: the imports will be generated for
   current CPP settings and any CPP annotations in the import block will be
   discarded. This may be a particular problem if you are writing code for
   several generations of `ghc` and `base` for example.
+  [retrie](https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs)
+  solves this problem generating all possible versions of the module
+   (exponential in the number of `#if` directives), operating on each version
+   individually, and splicing results back into the original file. A tour de
+   force!
 
 - `smuggler2` depends on the current `ghc` compiler and `base` library to check
   whether an import is redundant. Earlier versions of the compiler may, of
@@ -152,17 +164,19 @@ ghcid --command='cabal repl'
 
 - Literate Haskell `lhs` files are not supported
 
-- `hiding` clauses may not be properly analysed
+- `hiding` clauses may not be properly analysed.  So hiding things that are not
+  used may not be spotted.
 
-- Certain syntax pattern imports may not be imported correctly (with the `pattern`
-  keyword)
+- Certain syntax pattern imports may not be imported correctly (the `pattern`
+  keyword is missing)
 
 - The test suite does not seem to run reliably on Windows. This is probably
   more of an issue with the way that the tests are run, than `Smuggler2` itself.
 
 - Currently `cabal` does not have a particular way of specifying plugins.
   (See, eg, https://gitlab.haskell.org/ghc/ghc/issues/11244 and
-  https://github.com/haskell/cabal/issues/2965)
+  https://github.com/haskell/cabal/issues/2965) which would allow cleaner
+  separation of user code and plugin-code
 
 ## For contributors
 
@@ -216,7 +230,7 @@ $ cabal run smuggler2-test -- --accept
 to update the golden outputs to the current results of (failing) tests.
 
 It is sometimes necessary to run `cabal clean` before running tests to ensure
-that old artefacts do not lead to misleading results.
+that old build artefacts do not lead to misleading results.
 
 `smuggler-test` uses `cabal exec ghc` internally to run a test. The `cabal` command
 that is to be used to do that can be set using the `CABAL` environment variable.
@@ -261,20 +275,17 @@ making changes to the AST and adjusting the `Anns` to suit the changes.
 - drops implicit imports (such as Prelude) and, optionally, imports that are
   for instances only
 - replaces the original imports with minimal ones
-- `exactprint`s the result back over the original file (or one with a different
+- `exactPrint`s the result back over the original file (or one with a different
   suffix, if that was specified as option to `smuggler2`)
 
-A point of additional complexity is that the AST provided by GHC to `smuggler2`
-is of a different type from the AST that `ghc-exactprint` produces. (It is the
-product of the renaming phase of the compiler, while `ghc-exactprint` produces
+This round tripping is needed because the AST provided by GHC to `smuggler2`
+is of a different type from the AST that `ghc-exactprint` uses. (It is the
+product of the renaming phase of the compiler, while `ghc-exactprint` uses
 a parse phase AST.)
 
 ### Exports
 
-Exports are simpler to deal with. GHC generates a list of all the things that
-are in scope (`AvailInfo`) which can be used to generate a list of `Name`s
-(currently via `availNamesWithSelectors`). This list is turned into Haskell
-syntax used to replace the existing export list, if any.
+Exports are simpler to deal with as GHC's `exports_from_avail` does the work.
 
 ## Other projects
 
@@ -287,8 +298,11 @@ syntax used to replace the existing export list, if any.
   [Terser import declarations](https://www.machinesung.com/scribbles/terser-import-declarations.html) and
   [GHC API](https://www.machinesung.com/scribbles/ghc-api.html) (The site
   doesn't always seem to be up.)
+
 ## Acknowledgements
+
 Thanks to
+
 - Dmitrii Kovanikov and Veronika Romashkina who wrote [`smuggler`](https://hackage.haskell.org/package/smuggler)
 - Alan Zimmerman and Matthew Pickering for
   [`ghc-exactprint`](https://hackage.haskell.org/package/ghc-exactprint)

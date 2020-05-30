@@ -1,3 +1,6 @@
+{-|
+ Description: provides a wrapper around the 'ghc-exactprint' parser
+ -}
 {-# LANGUAGE CPP #-}
 
 module Smuggler2.Parser
@@ -20,9 +23,10 @@ import Outputable (ppr, showSDoc, text)
 import TcRnTypes (RnM)
 
 -- | Wrapper around the 'ghc-exactprint' parser.  Prints diagnostics for failed parses
--- (which should never happen). We need to use 'parseModuleFromStringInternal'
--- because 'parseMofuleFromString' doesn't pick up the correct 'DynFlags' in
--- some cases.
+-- (which should never happen). We need to use
+-- 'Language.Haskell.GHC.ExactPrint.parseModuleFromStringInternal'
+-- because 'Language.Haskell.GHC.ExactPrintparseModuleFromString'
+-- doesn't pick up the correct 'DynFlags' in -- some cases.
 runParser ::
   DynFlags -> FilePath -> String -> RnM (Either () (Anns, ParsedSource))
 runParser dflags fileName fileContents = do

@@ -1,3 +1,7 @@
+{- |
+ Description: handling of command line options
+
+ -}
 module Smuggler2.Options
   ( Options (..),
     parseCommandLineOptions,

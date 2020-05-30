@@ -1,3 +1,6 @@
+{-|
+ Description: the core of 'Smuggler2'
+ -}
 {-# LANGUAGE LambdaCase #-}
 
 module Smuggler2.Plugin
@@ -65,6 +68,7 @@ import TcRnTypes
     TcM,
   )
 
+-- | 'Plugin' interface to GHC
 plugin :: Plugin
 plugin =
   defaultPlugin

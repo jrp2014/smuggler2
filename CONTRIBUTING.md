@@ -1,9 +1,9 @@
-# Contributing to the Kowainik repositories
+# Contributing to the this repository
 
-## :wave: Greetings Traveler!
+## :wave: Greetings
 
-We are delighted you're reading this, and we appreciate the effort you're
-taking to make our projects awesome! :sparkles:
+Delighted you're reading this, appreciate the effort you're
+taking to make this project awesome! :sparkles:
 
 ## How to contribute
 
@@ -14,15 +14,10 @@ don't hesitate to create an issue [here](../../issues/new) in a free format.
 
 ### Create a PR
 
-We love to receive pull requests from everyone! It's usually a good idea
+Pull requests are very welcome! It's usually a good idea
 to tell about your intention to work on something under the corresponding
 issue, so everyone is aware that you're on it. If there's no such issue — simply
 create a new one!
-
-To get started with the Pull Request implementation you should first 
-[fork](../../fork), then clone the repo:
-
-    git clone git@github.com:your-username/project-name.git
 
 Make your changes and consider the following checklist to go through 
 before submitting your pull request.
@@ -31,10 +26,7 @@ before submitting your pull request.
 - [ ] New/fixed features work as expected (Bonus points for the new tests).
 - [ ] There are no warnings during compilation.
 - [ ] `hlint .` output is: _No Hints_ (see [`hlint`][hlint] tool docs).
-- [ ] The code is formatted with the [`stylish-haskell`][stylish-tool] tool 
-      using [stylish-haskell.yaml][stylish] file in the repository.
-- [ ] The code style of the files you changed is preserved (for more specific 
-      details on our style guide check [this document][style-guide]).
+- [ ] The code style of the files you changed is preserved
 - [ ] Commit messages are in the proper format.
       Start the first line of the commit with the issue number in square parentheses.
       
@@ -50,4 +42,4 @@ Thanks for spending your time on reading this contributing guide! :sparkling_hea
 [stylish]: .stylish-haskell.yaml
 [stylish-tool]: http://hackage.haskell.org/package/stylish-haskell
 [hlint]: http://hackage.haskell.org/package/hlint
-[style-guide]: https://github.com/kowainik/org/blob/master/style-guide.md#haskell-style-guide
+[ormolu]: https://hackage.haskell.org/package/ormolu
