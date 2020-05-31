@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               smuggler2
-version:            0.3.2.1
+version:            0.3.2.2
 synopsis:
   GHC Source Plugin that helps to minimise imports and generate explicit exports
 
@@ -8,10 +8,12 @@ description:
   == Usage
   Add @smuggler2@ to the build dependencies of your project.
   .
-  Then add the following to ghc-options: @-fplugin=Smuggler2.Plugin@
+  Then add the following to ghc-options: @-fplugin=Smuggler2.Plugin@. See the
+  README <https://hackage.haskell.org/package/smuggler2> for more details
+  and options.
 
 homepage:           https://github.com/jrp2014/smuggler2
-bug-reports:        https://github.com/jrp2014/smuggler2
+bug-reports:        https://github.com/jrp2014/smuggler2/issues
 license:            MPL-2.0
 license-file:       LICENSE
 author:             jrp2014, Dmitrii Kovanikov, Veronika Romashkina

@@ -8,6 +8,9 @@ The change log is available [on GitHub][2].
 ## [Unreleased]
 - Nothing to report
 
+##  [0.3.2.2]: --  31 May 2020
+- Documentation only
+
 ##  [0.3.2.1]: --  30 May 2020
 - Provisional version for Hackage
 

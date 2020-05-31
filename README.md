@@ -1,16 +1,20 @@
-# (smuggler2)[]
+# [smuggler2]()
 
 [![MPL-2.0 license](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/jrp2014/smuggler2/blob/master/LICENSE)
 ![Smuggler2](https://github.com/jrp2014/smuggler2/workflows/Smuggler2/badge.svg)
 [![Build Status](https://travis-ci.com/jrp2014/smuggler2.svg?branch=master)](https://travis-ci.com/jrp2014/smuggler2)
 [![Hackage](https://img.shields.io/hackage/v/smuggler2.svg?logo=haskell)](https://hackage.haskell.org/package/smuggler2)
-[![Stackage](https://www.stackage.org/package/smuggler-2/badge/nightly?label=stackage)](https://www.stackage.org/package/smuggler-2)
+[![Stackage](https://www.stackage.org/package/smuggler2/badge/nightly?label=stackage)](https://www.stackage.org/package/smuggler2)
 
-Smuggler2 is a Haskell GHC Source Plugin that rewrites module imports (to produce a
-minimal set) and adds or replaces explicit exports automatically.
+Smuggler2 is a Haskell GHC Source Plugin that automatically
+
+- rewrites module imports to produce a minimal set, and
+- adds or replaces explicit exports.
 
 This may make code easier to read because the provenance of imported
-names is explcit. While writing code, it may be convenient to import a complete
+names is explcit.
+
+While writing code, it may be convenient to import a complete
 module (by not specifiying what is to be imported from it) and then get
 Smuggler2 to limit the import to include only the names that are used.
 
@@ -30,7 +34,7 @@ like
 
 ```Cabal
 flag smuggler2
-  description: Rewrite sources to cleanp imports, and create explicit exports
+  description: Rewrite sources to cleanup imports, and create explicit exports
   exports
   default:     False
   manual:      True
@@ -41,7 +45,7 @@ common smuggler-options
     build-depends: smuggler2 >= 0.3
 ```
 
-and the `import: smuggler-options` in the appropriate `library` or `executable` sections.
+and then `import: smuggler-options` in the appropriate `library` or `executable` sections.
 
 The use of the flag allows you to build with or without source processing. Eg,
 
@@ -67,7 +71,7 @@ common smuggler-options
 ```
 
 (You may need to install from a local copy using `cabal v1-install` for `smuggler2`
-to be recognised.)
+to be recognised, perhaps depending on your version of `cabal`.)
 
 ### Options
 
@@ -103,7 +107,7 @@ there are no unused imports or exports to be added or replaced.
 So you can just run `ghcid` as usual:
 
 ```bash
-ghcid --command='cabal repl'
+$ ghcid --command='cabal repl'
 ```
 
 If you add `-v` to your `ghc-options`
@@ -113,16 +117,18 @@ If you add `-v` to your `ghc-options`
 `Smugggler2` is robust -- it can chew through the
 [agda](https://github.com/agda/agda) codebase of over 370 modules with complex
 interdependencies and be tripped over by only
+
 - a handful of pattern synonym imports,
 - a couple of ambiguous exports (are we trying to export something
-defined in the current module or something with the same name from an imported
-module)
+  defined in the current module or something with the same name from an imported
+  module)
 - and a couple of imports where both qualifed and unqualifed version of the
   module are imported and there are references to both qualified and unqualifed
   version of the same names
 
 But there are some caveats, most of which are either easy enough to work around
 (and still benefit from a great reduction in keyboard work):
+
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
   them. (This is a more aggressive approach than `smuggler` which focuses on
   removing redundant imports.) It has advantages and disadvantages. The
@@ -146,9 +152,9 @@ But there are some caveats, most of which are either easy enough to work around
   several generations of `ghc` and `base` for example.
   [retrie](https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs)
   solves this problem generating all possible versions of the module
-   (exponential in the number of `#if` directives), operating on each version
-   individually, and splicing results back into the original file. A tour de
-   force!
+  (exponential in the number of `#if` directives), operating on each version
+  individually, and splicing results back into the original file. A tour de
+  force!
 
 - `smuggler2` depends on the current `ghc` compiler and `base` library to check
   whether an import is redundant. Different versions of the compiler may, of
@@ -161,7 +167,7 @@ But there are some caveats, most of which are either easy enough to work around
 
 - Literate Haskell `lhs` files are not supported
 
-- `hiding` clauses may not be properly analysed.  So hiding things that are not
+- `hiding` clauses may not be properly analysed. So hiding things that are not
   used may not be spotted.
 
 - Certain syntax pattern imports may not be imported correctly (the `pattern`
