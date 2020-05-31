@@ -2,11 +2,14 @@
 
 module Main where
 
+import Control.Monad (forM)
 import Data.Maybe (fromMaybe)
+import qualified Data.Set as Set (fromList, member)
 import GHC.Paths (ghc)
 import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
+import System.Directory (doesDirectoryExist, getDirectoryContents)
 import System.Environment (lookupEnv)
-import System.FilePath ((-<.>), (</>), takeBaseName)
+import System.FilePath ((-<.>), (</>), takeBaseName, takeExtension)
 import System.Process.Typed
   ( ProcessConfig,
     proc,
@@ -15,7 +18,7 @@ import System.Process.Typed
     setWorkingDirInherit,
   )
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Golden (findByExtension, goldenVsFileDiff, writeBinaryFile)
+import Test.Tasty.Golden ( goldenVsFileDiff, writeBinaryFile)
 
 -- | Where the tests are, relative to the project level cabal file
 testDir :: FilePath
@@ -49,7 +52,7 @@ testOptions opts =
 -- imports and exports)
 goldenTests :: Options -> IO TestTree
 goldenTests opts = do
-  testFiles <- findByExtension [".hs"] testDir
+  testFiles <- findByExtension' [".hs"] testDir
   return $
     testGroup
       testName
@@ -70,6 +73,37 @@ goldenTests opts = do
   where
     testName = fromMaybe "NoNewExtension" (newExtension opts)
 
+-- | A version of 'Test.Tasty.Golden.findByExtension' that does not look into
+-- subdirectories.  This allows tests to be run on a module that imports other
+-- modules without risking the race condition where smuggler is being run
+-- on the imported module directly, and also when the importing module is being
+-- tested. ('Tasty' runs test in parallel and the same output files are
+-- produced in both direct and imported cases.) Putting the imported module in
+-- a subdirectory and not testing it direcly avoids this race condition.
+findByExtension' ::
+  -- | extensions
+  [FilePath] ->
+  -- | directory
+  FilePath ->
+  -- | paths
+  IO [FilePath]
+findByExtension' extsList = go
+  where
+    exts = Set.fromList extsList
+    go :: FilePath -> IO [FilePath]
+    go dir = do
+      allEntries <- getDirectoryContents dir
+      let entries = filter (not . (`elem` [".", ".."])) allEntries
+      fmap concat $ forM entries $ \e -> do
+        let path = dir ++ "/" ++ e
+        isDir <-
+          doesDirectoryExist
+            path
+        return $
+          if isDir
+            then [] -- don't recurse
+            else [path | takeExtension path `Set.member` exts]
+
 -- | Just run all the tests
 main :: IO ()
 main = defaultMain =<< testOptions optionsList
@@ -82,14 +116,17 @@ compile testcase opts = do
   let cabalCmd = words $ fromMaybe "cabal" cabalPath -- default to @cabal@ if @CABAL@ is not set
   let cabalConfig =
         setWorkingDirInherit . setEnvInherit $
-          proc (head cabalCmd) (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
+          proc
+            (head cabalCmd)
+            (tail cabalCmd ++ cabalArgs) ::
+          ProcessConfig () () ()
   runProcess_ cabalConfig
   where
     cabalArgs :: [String]
     cabalArgs =
       -- - not sure why it is necessary to mention the smuggler2 package explicitly,
       --   but it appears to be hidden otherwise.
-      -- - This puts the .imports files that smuggler generates somewhere they
+      -- - This also puts the .imports files that smuggler generates somewhere they
       --   can easily be found
       [ "--with-compiler=" ++ ghc,
         "exec",
@@ -99,15 +136,11 @@ compile testcase opts = do
         "-v0",
         "-dumpdir=" ++ testDir,
         "-fno-code",
+        "-i" ++ testDir,
         "-fplugin=Smuggler2.Plugin"
       ]
-        ++ map
-          ("-fplugin-opt=Smuggler2.Plugin:" ++)
-          ( let ia = importAction opts
-                ea = exportAction opts
-                p = [show ia, show ea]
-             in case newExtension opts of
-                  Nothing -> mkExt ia ea : p -- provide a default extension
-                  Just e -> e : p
-          )
-        ++ [testcase]
+        ++ [ "-fplugin-opt=Smuggler2.Plugin:"
+               ++ let ext = mkExt (importAction opts) (exportAction opts)
+                   in fromMaybe ext (newExtension opts),
+             testcase
+           ]

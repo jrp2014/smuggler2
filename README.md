@@ -244,14 +244,23 @@ command that is to be used to do that can be set using the `CABAL` environment
 variable. This may be helpful for certain workflows where `cabal` is not in the
 current path, or you want to add extra flags to the `cabal` command.
 
-The test suite does not run reliably on Windows
+The test suite does not seem to run reliably on Windows
+
+Importing a test module from another test module in the same directory is likely
+to lead to race conditions as 'Tasty' runs tests in parallel and so will try to
+generate the same `smuggler2` output both when the imported module is being
+tested directly and when it is being processed when the importing module is
+being tested. Put the imported module in a subdirectory to avoid this issue, as
+the test harness only looks for tests in `test\tests` and not its
+subdirectories.
 
 ## Implementation approach
 
 `smuggler2` uses the `ghc-exactprint`
 [library](https://hackage.haskell.org/package/ghc-exactprint) to modiify the
 source code. The documentation for the library is fairly spartan, and the
-library is not widely used, so the use here can, no doubt, be optimised.
+library is not widely used, at least in publicly available code, so the use here
+can, no doubt, be optimised.
 
 The library is needed because the annotated AST that GHC generates does not have
 enough information to reconstitute the original source. Some parts of the
