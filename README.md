@@ -1,13 +1,10 @@
-# smuggler2
-
-<!--
-[![Hackage](https://img.shields.io/hackage/v/smuggler.svg?logo=haskell)](https://hackage.haskell.org/package/smuggler2)
-[![Build](https://img.shields.io/travis/kowainik/smuggler.svg?logo=travis)](http://travis-ci.org/kowainik/smuggler)
--->
+# (smuggler2)[]
 
 [![MPL-2.0 license](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](https://github.com/jrp2014/smuggler2/blob/master/LICENSE)
 ![Smuggler2](https://github.com/jrp2014/smuggler2/workflows/Smuggler2/badge.svg)
 [![Build Status](https://travis-ci.com/jrp2014/smuggler2.svg?branch=master)](https://travis-ci.com/jrp2014/smuggler2)
+[![Hackage](https://img.shields.io/hackage/v/smuggler2.svg?logo=haskell)](https://hackage.haskell.org/package/smuggler2)
+[![Stackage](https://www.stackage.org/package/smuggler-2/badge/nightly?label=stackage)](https://www.stackage.org/package/smuggler-2)
 
 Smuggler2 is a Haskell GHC Source Plugin that rewrites module imports (to produce a
 minimal set) and adds or replaces explicit exports automatically.
@@ -154,10 +151,10 @@ But there are some caveats, most of which are either easy enough to work around
    force!
 
 - `smuggler2` depends on the current `ghc` compiler and `base` library to check
-  whether an import is redundant. Earlier versions of the compiler may, of
-  course, need it. The [base library
-  changelog](https://hackage.haskell.org/package/base/changelog) provides some
-  details of what was made available when.
+  whether an import is redundant. Different versions of the compiler may, of
+  course, need different slightly imports, typically from `base`. The
+  [base library changelog](https://hackage.haskell.org/package/base/changelog)
+  provides some details of what was made available when.
 
 - Multiple separate import lines referring to the same library are not
   consolidated
