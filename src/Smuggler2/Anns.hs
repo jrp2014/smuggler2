@@ -1,7 +1,6 @@
-{-|
- Description: Utility functions for transforming and manipulating 'ghc' AST elements
-              and their associated 'ghc-exactprint' 'Language.Haskell.GHC.ExactPrint.Anns'
- -}
+-- |
+-- Description: Utility functions for transforming and manipulating 'ghc' AST elements
+--              and their associated 'ghc-exactprint' 'Language.Haskell.GHC.ExactPrint.Anns'
 module Smuggler2.Anns
   ( mkExportAnnT,
     mkLoc,
@@ -13,10 +12,17 @@ where
 
 import Avail (AvailInfo (..))
 import Data.Generics as SYB (Data)
-import qualified Data.Map.Strict as Map (alter, fromList, insert, lookup, toList, union)
+import qualified Data.Map.Strict as Map
+  ( alter,
+    fromList,
+    insert,
+    lookup,
+    toList,
+    union,
+  )
 import Data.Maybe (fromMaybe)
 import GHC
-  ( AnnKeywordId (AnnCloseP, AnnDotdot, AnnOpenP, AnnVal),
+  ( AnnKeywordId (AnnCloseP, AnnDotdot, AnnOpenP, AnnPattern, AnnVal),
     GhcPs,
     IE (..),
     IEWrappedName (..),
@@ -24,7 +30,13 @@ import GHC
     Name,
     RdrName,
   )
-import GhcPlugins (GenLocated (L), Located, getOccFS, getOccString, mkVarUnqual)
+import GhcPlugins
+  ( GenLocated (L),
+    Located,
+    getOccFS,
+    getOccString,
+    mkVarUnqual,
+  )
 import Language.Haskell.GHC.ExactPrint
   ( Annotation (annEntryDelta, annPriorComments, annsDP),
     TransformT,
@@ -41,32 +53,41 @@ import Language.Haskell.GHC.ExactPrint.Types
 import Lexeme (isLexSym)
 
 -- Generates the annotations for a name, wrapping () around symbollic names
-mkLIEName :: Monad m => Name -> TransformT m (LIEWrappedName RdrName)
-mkLIEName name = do
+mkLIEName :: Monad m => [Name] -> Name -> TransformT m (LIEWrappedName RdrName)
+mkLIEName patsyns name = do
   let nameFS = getOccFS name
   let ann =
         if isLexSym nameFS -- infix type or data constructor / identifier
           then [(G AnnOpenP, DP (0, 0)), (G AnnVal, DP (0, 0)), (G AnnCloseP, DP (0, 0))]
           else [(G AnnVal, DP (0, 0))]
-  lname <-
-    mkLocWithAnns
-      (mkVarUnqual nameFS)
-      (DP (1, 2)) -- drop downn a line and indent 2 spaces
-      ann
-  mkLoc (IEName lname)
+  if name `elem` patsyns
+    then do
+      lname <-
+        mkLocWithAnns
+          (mkVarUnqual nameFS)
+          (DP (0, 1)) -- for a gap after @pattern@
+          ann
+      mkLocWithAnns (IEPattern lname) (DP (1, 2)) [(G AnnPattern, DP (0, 0))]
+    else do
+      lname <-
+        mkLocWithAnns
+          (mkVarUnqual nameFS)
+          (DP (0, 0))
+          ann
+      mkLocWithAnns (IEName lname) (DP (1, 2)) []
 
 -- | Uses 'AvailInfo' about an exportable thing to generate the corresponding
 -- piece of (annotated) AST
-mkExportAnnT :: Monad m => AvailInfo -> TransformT m (Located (IE GhcPs))
+mkExportAnnT :: Monad m => [Name] -> AvailInfo -> TransformT m (Located (IE GhcPs))
 -- Ordinary identifier
-mkExportAnnT (Avail name) = do
-  liename <- mkLIEName name
+mkExportAnnT patsyns (Avail name) = do
+  liename <- mkLIEName patsyns name
   mkLoc (IEVar noExt liename)
 
 -- A type or class.  Since we expect @name@ to be in scope, it should be the head
 -- of @names@
-mkExportAnnT (AvailTC name names fieldlabels) = do
-  liename <- mkLIEName name
+mkExportAnnT patsyns (AvailTC name names fieldlabels) = do
+  liename <- mkLIEName patsyns name
 
   -- Could export pieces explicitly, but this becomes ugly;
   -- operators need to be wrapped in (), etc, so just export things
@@ -92,15 +113,13 @@ mkExportAnnT (AvailTC name names fieldlabels) = do
     -- A type class with pieces
     (typeorclass : _pieces, _fl) ->
       if name == typeorclass -- check AvailTC invariant
-        then
-            lienameWithWildcard
+        then lienameWithWildcard
         else
           error $
             "smuggler: broken AvailTC invariant: "
               ++ getOccString name
               ++ "/="
               ++ getOccString typeorclass
-
 
 -------------------------------------------------------------------------------
 -- Inspired by retrie

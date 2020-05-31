@@ -1,8 +1,7 @@
-{-|
- Description: the core of 'smuggler2'
- -}
 {-# LANGUAGE LambdaCase #-}
 
+-- |
+-- Description: the core of 'smuggler2'
 module Smuggler2.Plugin
   ( plugin,
   )
@@ -40,7 +39,8 @@ import Language.Haskell.GHC.ExactPrint
     setEntryDPT,
   )
 import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (DP))
-import Outputable (Outputable (ppr),  neverQualify, printForUser, text, vcat)
+import Outputable (Outputable (ppr), neverQualify, printForUser, text, vcat)
+import PatSyn (PatSyn, patSynName)
 import Paths_smuggler2 (version)
 import Plugins
   ( CommandLineOption,
@@ -64,7 +64,7 @@ import System.IO (IOMode (WriteMode), withFile)
 import TcRnExports (exports_from_avail)
 import TcRnTypes
   ( RnM,
-    TcGblEnv (tcg_exports, tcg_imports, tcg_mod, tcg_rdr_env, tcg_rn_exports, tcg_rn_imports, tcg_used_gres),
+    TcGblEnv (tcg_exports, tcg_imports, tcg_mod, tcg_patsyns, tcg_rdr_env, tcg_rn_exports, tcg_rn_imports, tcg_used_gres),
     TcM,
   )
 
@@ -93,9 +93,9 @@ smugglerPlugin clopts modSummary tcEnv
     -- imports, or exports already exist and we are not replacing them
     let noUnusedImports = all (\(_decl, _used, unused) -> null unused) usage
     let hasExplicitExports = case tcg_rn_exports tcEnv of
-          Nothing -> False -- There is not even a module header
+          Nothing   -> False -- There is not even a module header
           (Just []) -> False
-          (Just _) -> True
+          (Just _)  -> True
     -- ... so short circuit if:
     -- - we are skipping import processing or there are no unused imports, and
     -- - we are skipping export processing or there are explict exports and we are not replacing them
@@ -135,7 +135,7 @@ smugglerPlugin clopts modSummary tcEnv
       -- Get the pre-processed module source code
       let modFileContents = case ms_hspp_buf modSummary of
             -- Not clear under what circumstances this could happen
-            Nothing -> error $ "smuggler: missing source file: " ++ modulePath
+            Nothing       -> error $ "smuggler: missing source file: " ++ modulePath
             Just contents -> strBufToStr contents
 
       -- Parse the whole module
@@ -165,12 +165,12 @@ smugglerPlugin clopts modSummary tcEnv
               let (astHsMod', (annsHsMod', _locIndex), _log) =
                     runTransform annsHsMod $
                       replaceImports annsImpMod minImports astHsMod
-                        >>= addExplicitExports exports
+                        >>= addExplicitExports exports (tcg_patsyns tcEnv)
 
               -- Print the result
               let newContent = exactPrint astHsMod' annsHsMod'
               liftIO $ case newExtension options of
-                Nothing -> writeFile modulePath newContent
+                Nothing  -> writeFile modulePath newContent
                 Just ext -> writeFile (modulePath -<.> ext) newContent
 
             -- Clean up: delete the GHC-generated imports file
@@ -216,10 +216,12 @@ smugglerPlugin clopts modSummary tcEnv
               Monad m =>
               -- | The list of exports to be added
               Avails ->
+              -- | Pattern synonyms
+              [PatSyn] ->
               -- | target module
               ParsedSource ->
               TransformT m ParsedSource
-            addExplicitExports exports t@(L astLoc hsMod) =
+            addExplicitExports exports patsyns t@(L astLoc hsMod) =
               case exportAction options of
                 NoExportProcessing -> return t
                 AddExplicitExports ->
@@ -239,7 +241,7 @@ smugglerPlugin clopts modSummary tcEnv
                   | null exports = return t -- there is nothing exportable
                   | otherwise = do
                     -- Generate the exports list
-                    exportsList <- mapM mkExportAnnT exports
+                    exportsList <- mapM (mkExportAnnT (map patSynName patsyns)) exports
                     -- add commas in between and parens around
                     mapM_ addTrailingCommaT (init exportsList)
                     lExportsList <- mkLoc exportsList >>= mkParenT unLoc
@@ -274,7 +276,7 @@ smugglerPlugin clopts modSummary tcEnv
         notInstancesOnly :: ImportDecl pass -> Bool
         notInstancesOnly i = case ideclHiding i of
           Just (False, L _ []) -> False
-          _ -> True
+          _                    -> True
 
         keepInstanceOnlyImports :: Bool
         keepInstanceOnlyImports = importAction options /= MinimiseImports
