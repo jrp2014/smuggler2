@@ -12,20 +12,14 @@ Smuggler2 is a Haskell GHC Source Plugin that automatically
   read because the provenance of imported names is explcit.
 
 - adds or replaces explicit exports to produce a maximalist set for hand
-  pruning. By default, all values, types and classes defined in a module are
-  exported (excluding those that are imported). It does not check whether an
-  exported name is used elsewhere in your package. Limiting exports may make it
-  easier for `ghc` to optimise some code.
+  pruning. All values, types and classes defined in a module are exported
+  (excluding those that are imported). It does not check whether an exported
+  name is used elsewhere in your package. Limiting exports may make it easier
+  for `ghc` to optimise some code.
 
 While writing code, it may be convenient to import a complete module (by not
 specifiying what is to be imported from it) and then get Smuggler2 to limit the
 import to include only the names that are used.
-
-By default, all values, types and classes defined in a module are exported
-(excluding those that are imported). Smuggler2 can generate the code for that
-maximalist export list, for hand pruning. (It does not check whether an exported
-name is used.) Limiting exports may make it easier for `ghc` to optimise some
-code.
 
 ## How to use
 
