@@ -20,25 +20,10 @@ module ImportPattern (
   hd,
   h ) where
 
-import Control.Monad ()
-import qualified Data.Sequence as Seq ()
+import Control.Monad (guard)
+import qualified Data.Sequence as Seq
+
 import Imported.ExportPattern
-    ( T,
-      Nat(Z, S),
-      Showable(..),
-      Type,
-      ExNumPat,
-      Head,
-      Single,
-      Pair,
-      One,
-      Succ,
-      (:>),
-      (:<),
-      Empty,
-      Int,
-      Arrow,
-      P )
 
 -- pattern P = 42
 

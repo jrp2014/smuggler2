@@ -2,26 +2,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module ImportPattern (
-  useP,
-  collectArgs,
-  isInt,
-  isIntEndo,
-  arrows,
-  viewPL,
-  viewPR,
-  fac,
-  showable,
-  one,
-  f,
-  g,
-  two,
-  single,
-  hd,
-  h ) where
+module ImportPattern where
 
-import Control.Monad ()
-import qualified Data.Sequence as Seq ()
 import Imported.ExportPattern
     ( T,
       Nat(Z, S),

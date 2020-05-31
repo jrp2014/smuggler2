@@ -6,7 +6,7 @@ Notable changes to `Smuggler2`
 The change log is available [on GitHub][2].
 
 ## [Unreleased]
-- Nothing to report
+- Exported pattern synonyms are annotated with the 'pattern' keyword
 
 ##  [0.3.2.2]: --  31 May 2020
 - Documentation only

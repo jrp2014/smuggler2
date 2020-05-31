@@ -23,9 +23,8 @@ module ExportPattern2 (
   pattern Arrow,
   pattern P ) where
 
-import Control.Monad ( guard )
+import Control.Monad (guard)
 import qualified Data.Sequence as Seq
-    ( viewl, viewr, ViewL((:<), EmptyL), ViewR((:>)) )
 
 pattern P = 42
 

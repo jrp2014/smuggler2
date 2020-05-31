@@ -20,8 +20,6 @@ module ImportPattern (
   hd,
   h ) where
 
-import Control.Monad ()
-import qualified Data.Sequence as Seq ()
 import Imported.ExportPattern
     ( T,
       Nat(Z, S),

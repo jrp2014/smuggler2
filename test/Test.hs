@@ -18,7 +18,7 @@ import System.Process.Typed
     setWorkingDirInherit,
   )
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Golden ( goldenVsFileDiff, writeBinaryFile)
+import Test.Tasty.Golden (goldenVsFileDiff, writeBinaryFile)
 
 -- | Where the tests are, relative to the project level cabal file
 testDir :: FilePath
@@ -139,8 +139,11 @@ compile testcase opts = do
         "-i" ++ testDir,
         "-fplugin=Smuggler2.Plugin"
       ]
-        ++ [ "-fplugin-opt=Smuggler2.Plugin:"
-               ++ let ext = mkExt (importAction opts) (exportAction opts)
-                   in fromMaybe ext (newExtension opts),
-             testcase
-           ]
+        ++ map
+          ("-fplugin-opt=Smuggler2.Plugin:" ++)
+          ( let ia = importAction opts
+                ea = exportAction opts
+                -- the extension should have been set by 'optionsList'
+             in (fromMaybe "missng" (newExtension opts) : [show ia, show ea])
+          )
+        ++ [testcase]
