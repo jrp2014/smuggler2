@@ -1,8 +1,0 @@
-module Duplicated (
-  test ) where
-
-import Data.Char ( isDigit )
-import Data.Char ( isLetter )
-
-
-test x = isDigit x || isLetter x

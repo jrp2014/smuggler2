@@ -25,18 +25,18 @@ import Imported.ExportPattern
       Nat(Z, S),
       Showable(..),
       Type,
-      ExNumPat,
-      Head,
-      Single,
-      Pair,
-      One,
-      Succ,
-      (:>),
-      (:<),
-      Empty,
-      Int,
-      Arrow,
-      P )
+      pattern ExNumPat,
+      pattern Head,
+      pattern Single,
+      pattern Pair,
+      pattern One,
+      pattern Succ,
+      pattern (:>),
+      pattern (:<),
+      pattern Empty,
+      pattern Int,
+      pattern Arrow,
+      pattern P )
 
 -- pattern P = 42
 

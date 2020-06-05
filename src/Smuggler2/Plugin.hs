@@ -1,72 +1,72 @@
 {-# LANGUAGE LambdaCase #-}
 
 -- |
--- Description: the core of 'smuggler2'
+-- Description: the core of the 'Smuggler2.Plugin'
 module Smuggler2.Plugin
   ( plugin,
   )
 where
 
-import Avail (AvailInfo, Avails)
-import Control.Monad (unless)
-import Data.Maybe (fromMaybe, isNothing)
-import Data.Version (showVersion)
-import DynFlags (DynFlags (dumpDir), HasDynFlags (getDynFlags))
-import ErrUtils (compilationProgressMsg, fatalErrorMsg)
+import Avail ( AvailInfo, Avails )
+import Control.Monad ( unless )
+import Data.Maybe ( fromMaybe, isNothing )
+import Data.Version ( showVersion )
+import DynFlags ( DynFlags(dumpDir), HasDynFlags(getDynFlags) )
+import ErrUtils ( compilationProgressMsg, fatalErrorMsg )
 import GHC
-  ( GenLocated (L),
-    GhcPs,
-    HsModule (hsmodExports, hsmodImports),
-    ImportDecl (ideclHiding, ideclImplicit),
-    LIE,
-    LImportDecl,
-    Located,
-    ModSummary (ms_hspp_buf, ms_hspp_file, ms_mod),
-    Module (moduleName),
-    ParsedSource,
-    moduleNameString,
-    unLoc,
-  )
-import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import IOEnv (MonadIO (liftIO), readMutVar)
+    ( GenLocated(L),
+      GhcPs,
+      HsModule(hsmodExports, hsmodImports),
+      ImportDecl(ideclHiding, ideclImplicit),
+      LIE,
+      LImportDecl,
+      Located,
+      ModSummary(ms_hspp_buf, ms_hspp_file, ms_mod),
+      Module(moduleName),
+      ParsedSource,
+      moduleNameString,
+      unLoc )
+import GHC.IO.Encoding ( setLocaleEncoding, utf8 )
+import IOEnv ( MonadIO(liftIO), readMutVar )
 import Language.Haskell.GHC.ExactPrint
-  ( Anns,
-    TransformT,
-    addTrailingCommaT,
-    exactPrint,
-    graftT,
-    runTransform,
-    setEntryDPT,
-  )
-import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (DP))
-import Outputable (Outputable (ppr), neverQualify, printForUser, text, vcat)
-import PatSyn (PatSyn, patSynName)
-import Paths_smuggler2 (version)
+    ( Anns,
+      TransformT,
+      addTrailingCommaT,
+      exactPrint,
+      graftT,
+      runTransform,
+      setEntryDPT )
+import Language.Haskell.GHC.ExactPrint.Types ( DeltaPos(DP) )
+import Outputable
+    ( Outputable(ppr), neverQualify, printForUser, text, vcat )
+import Paths_smuggler2 ( version )
 import Plugins
-  ( CommandLineOption,
-    Plugin (pluginRecompile, typeCheckResultAction),
-    defaultPlugin,
-    purePlugin,
-  )
-import RnNames (ImportDeclUsage, findImportUsage, getMinimalImports)
-import Smuggler2.Anns (mkExportAnnT, mkLoc, mkParenT)
+    ( CommandLineOption,
+      Plugin(pluginRecompile, typeCheckResultAction),
+      defaultPlugin,
+      purePlugin )
+import RnNames
+    ( ImportDeclUsage, findImportUsage )
+import Smuggler2.Anns
+import Smuggler2.Imports
+import Smuggler2.Exports
 import Smuggler2.Options
-  ( ExportAction (AddExplicitExports, NoExportProcessing, ReplaceExports),
-    ImportAction (MinimiseImports, NoImportProcessing),
-    Options (exportAction, importAction, newExtension),
-    parseCommandLineOptions,
-  )
-import Smuggler2.Parser (runParser)
-import StringBuffer (StringBuffer (StringBuffer), lexemeToString)
-import System.Directory (removeFile)
-import System.FilePath ((-<.>), (</>))
-import System.IO (IOMode (WriteMode), withFile)
-import TcRnExports (exports_from_avail)
+    ( ExportAction(AddExplicitExports, NoExportProcessing,
+                   ReplaceExports),
+      ImportAction(MinimiseImports, NoImportProcessing),
+      Options(exportAction, importAction, newExtension),
+      parseCommandLineOptions )
+import Smuggler2.Parser ( runParser )
+import StringBuffer ( StringBuffer(StringBuffer), lexemeToString )
+import System.Directory ( removeFile )
+import System.FilePath ( (-<.>), (</>) )
+import System.IO ( IOMode(WriteMode), withFile )
+import TcRnExports ( exports_from_avail )
 import TcRnTypes
-  ( RnM,
-    TcGblEnv (tcg_exports, tcg_imports, tcg_mod, tcg_patsyns, tcg_rdr_env, tcg_rn_exports, tcg_rn_imports, tcg_used_gres),
-    TcM,
-  )
+    ( TcGblEnv(tcg_rdr_env, tcg_imports, tcg_mod, tcg_exports,
+               tcg_rn_imports, tcg_used_gres, tcg_rn_exports),
+      TcM,
+      RnM )
 
 -- | 'Plugin' interface to GHC
 plugin :: Plugin
@@ -165,7 +165,7 @@ smugglerPlugin clopts modSummary tcEnv
               let (astHsMod', (annsHsMod', _locIndex), _log) =
                     runTransform annsHsMod $
                       replaceImports annsImpMod minImports astHsMod
-                        >>= addExplicitExports exports (tcg_patsyns tcEnv)
+                        >>= addExplicitExports exports
 
               -- Print the result
               let newContent = exactPrint astHsMod' annsHsMod'
@@ -216,17 +216,15 @@ smugglerPlugin clopts modSummary tcEnv
               Monad m =>
               -- | The list of exports to be added
               Avails ->
-              -- | Pattern synonyms
-              [PatSyn] ->
               -- | target module
               ParsedSource ->
               TransformT m ParsedSource
-            addExplicitExports exports patsyns t@(L astLoc hsMod) =
+            addExplicitExports exports t@(L astLoc hsMod) =
               case exportAction options of
                 NoExportProcessing -> return t
                 AddExplicitExports ->
-                  -- only add explicit exports if there are none
-                  -- seems to work even if there is no explict module declaration
+                  -- Only add explicit exports if there are none.
+                  -- Seems to work even if there is no explict module declaration
                   -- presumably because the annotations that we generate are just
                   -- unused by exactPrint
                   if isNothing currentExplicitExports then result else return t
@@ -241,7 +239,7 @@ smugglerPlugin clopts modSummary tcEnv
                   | null exports = return t -- there is nothing exportable
                   | otherwise = do
                     -- Generate the exports list
-                    exportsList <- mapM (mkExportAnnT (map patSynName patsyns)) exports
+                    exportsList <- mapM mkExportAnnT  exports
                     -- add commas in between and parens around
                     mapM_ addTrailingCommaT (init exportsList)
                     lExportsList <- mkLoc exportsList >>= mkParenT unLoc
@@ -256,7 +254,7 @@ smugglerPlugin clopts modSummary tcEnv
     printMinimalImports' :: DynFlags -> FilePath -> [ImportDeclUsage] -> RnM ()
     printMinimalImports' dflags filename imports_w_usage =
       do
-        imports' <- getMinimalImports imports_w_usage
+        imports' <- Smuggler2.Imports.getMinimalImports imports_w_usage
         liftIO $
           withFile
             filename

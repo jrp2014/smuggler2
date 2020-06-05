@@ -206,7 +206,7 @@ $ cabal build
 To build with debugging:
 
 ```shell
-$ cabal bulid -fdebug
+$ cabal build -fdebug
 ```
 
 Curently this just adds an `-fdump-minimal-imports` parameter to GHC

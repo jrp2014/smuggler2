@@ -1,3 +1,0 @@
-module Test.ConstructorsUnused where
-
-foo = not

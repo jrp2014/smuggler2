@@ -1,4 +1,0 @@
-module Test.WildcardUsed (
-  foo ) where
-
-foo = False

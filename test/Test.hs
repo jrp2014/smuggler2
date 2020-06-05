@@ -3,6 +3,7 @@
 module Main where
 
 import Control.Monad (forM)
+import Data.List (sort)
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set (fromList, member)
 import GHC.Paths (ghc)
@@ -67,7 +68,7 @@ goldenTests opts = do
               writeBinaryFile outputFilename "Source file was not touched\r\n"
               compile testFile opts
           )
-        | testFile <- testFiles,
+        | testFile <- sort testFiles,
           let outputFilename = testFile -<.> testName
       ]
   where
@@ -118,8 +119,7 @@ compile testcase opts = do
         setWorkingDirInherit . setEnvInherit $
           proc
             (head cabalCmd)
-            (tail cabalCmd ++ cabalArgs) ::
-          ProcessConfig () () ()
+            (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
   runProcess_ cabalConfig
   where
     cabalArgs :: [String]

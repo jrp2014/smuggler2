@@ -33,6 +33,9 @@ runParser dflags fileName fileContents = do
   -- Withoout the following, comments are stripped (see #10942)
   -- It would be more efficient, but less visible to apply this tweak at the
   -- outset, in the main plugin function, but keep it here for visibility
+  -- See also https://gitlab.haskell.org/ghc/ghc/-/wikis/api-annotations, which
+  -- notes that the flags are returned as annotations by the
+  -- @Opt_KeepRawTokenStream@ flag.
   let dflags' = dflags `gopt_set` Opt_KeepRawTokenStream
 
   case parseModuleFromStringInternal dflags' fileName fileContents of
