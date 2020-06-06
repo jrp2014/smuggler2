@@ -1,1 +1,5 @@
-Source file was not touched
+module Test.BoolBoolUsed where
+
+import Data.Bool ( bool )
+
+func = bool

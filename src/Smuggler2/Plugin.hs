@@ -91,7 +91,7 @@ smugglerPlugin clopts modSummary tcEnv
 
     -- This ensures that the source file is not touched if there are no unused
     -- imports, or exports already exist and we are not replacing them
-    let noUnusedImports = all (\(_decl, _used, unused) -> null unused) usage
+    let noUnusedImports = all (\(_decl, used, unused) -> not (null used) && null unused) usage
     let hasExplicitExports = case tcg_rn_exports tcEnv of
           Nothing   -> False -- There is not even a module header
           (Just []) -> False
@@ -289,8 +289,8 @@ smugglerPlugin clopts modSummary tcEnv
       | otherwise = basefn
       where
         basefn =
-          "smuggler-" ++ moduleNameString (moduleName this_mod) ++ "."
-            ++ fromMaybe "smuggler" (newExtension options)
+          "smuggler2-" ++ moduleNameString (moduleName this_mod) ++ "."
+            ++ fromMaybe "smuggler2" (newExtension options)
             ++ ".imports"
 
     options :: Options

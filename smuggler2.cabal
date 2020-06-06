@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               smuggler2
-version:            0.3.2.2
+version:            0.3.3.2
 synopsis:
   GHC Source Plugin that helps to minimise imports and generate explicit exports
 
@@ -96,11 +96,11 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Smuggler2.Anns
+    Smuggler2.Exports
+    Smuggler2.Imports
     Smuggler2.Options
     Smuggler2.Parser
     Smuggler2.Plugin
-    Smuggler2.Imports
-    Smuggler2.Exports
 
   other-modules:   Paths_smuggler2
   autogen-modules: Paths_smuggler2

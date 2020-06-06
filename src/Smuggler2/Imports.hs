@@ -83,28 +83,34 @@ getMinimalImports = mapM mk_minimal
     -- The main trick here is that if we're importing all the constructors
     -- we want to say "T(..)", but if we're importing only a subset we want
     -- to say "T(A,B,C)".  So we have to find out what the module exports.
-    to_ie _ (Avail n)
+    to_ie _ (Avail n) -- An ordinary identifier (eg,  var, data constructor)
        = [IEVar noExtField (to_ie_post_rn_var $ noLoc n)]
---       = [IEVar noExtField (to_ie_post_rn $ noLoc n)]
-    to_ie _ (AvailTC n [m] [])
+    to_ie _ (AvailTC n [m] []) -- type or class with absent () list
        | n==m = [IEThingAbs noExtField (to_ie_post_rn $ noLoc n)]
     to_ie iface (AvailTC n ns fs)
       = case [(xs,gs) |  AvailTC x xs gs <- mi_exports iface
                  , x == n
                  , x `elem` xs    -- Note [Partial export]
                  ] of
-           [xs] | all_used xs -> [IEThingAll noExtField (to_ie_post_rn $ noLoc n)]
-                | otherwise   ->
+           -- class / type with methods / constructors
+           [xs] | all_used xs -> [IEThingAll noExtField (to_ie_post_rn_var $ noLoc n)] -- (..)
+
+                | isTcOcc (occName n) -> -- class
                    [IEThingWith noExtField (to_ie_post_rn $ noLoc n) NoIEWildcard
                                 (map (to_ie_post_rn_tc . noLoc) (filter (/= n) ns))
---                                (map (to_ie_post_rn . noLoc) (filter (/= n) ns))
                                 (map noLoc fs)]
                                           -- Note [Overloaded field import]
+
+                | otherwise   -> -- type
+                   [IEThingWith noExtField (to_ie_post_rn $ noLoc n) NoIEWildcard
+                                (map (to_ie_post_rn . noLoc) (filter (/= n) ns))
+                                (map noLoc fs)]
+
+           -- record type
            _other | all_non_overloaded fs
                            -> map (IEVar noExtField . to_ie_post_rn . noLoc) $ ns
---                           -> map (IEVar noExtField . to_ie_post_rn_var . noLoc) $ ns
                                  ++ map flSelector fs
-                  | otherwise ->
+                  | otherwise -> -- DuplicateRecordFields is applicable
                       [IEThingWith noExtField (to_ie_post_rn $ noLoc n) NoIEWildcard
                                 (map (to_ie_post_rn . noLoc) (filter (/= n) ns))
                                 (map noLoc fs)]
@@ -118,7 +124,31 @@ getMinimalImports = mapM mk_minimal
 
           all_non_overloaded = not . any flIsOverloaded
 
--- TODO:: Check that these are correct(ly used)
+
+-- An import is
+-- a var
+-- a tycon -> [ (..) | ( cname1 , … , cnamen )]
+-- a tycls -> [(..) | ( var1 , … , varn )]
+
+-- cname -> var | con
+-- var -> varid | ( varsym )  -- (does not start with :)
+-- con -> conid | ( consym )  -- (starts with :)
+
+-- GHC User Guide 8.7.3
+-- The name of the pattern synonym is in the same namespace as proper data constructors.
+-- Like normal data constructors, pattern synonyms can be imported through associations
+-- with a type constructor or independently.
+-- To export them on their own, in an export or import specification,
+-- you must prefix pattern names with the pattern keyword
+--
+-- GHC User Guide 9.9.5
+--The form C(.., mi, .., type Tj, ..), where C is a class, names the class C, and the
+--specified methods mi and associated types Tj. The types need a keyword “type” to distinguish
+--them from data constructors.
+--
+--Whenever there is no export list and a data instance is defined, the corresponding
+--data family type constructor is exported along with the new data constructors, regardless of
+--whether the data family is defined locally or in another module.
 
 to_ie_post_rn_var :: (HasOccName name) => Located name -> LIEWrappedName name
 to_ie_post_rn_var (L l n)
@@ -127,7 +157,7 @@ to_ie_post_rn_var (L l n)
 
 to_ie_post_rn :: (HasOccName name) => Located name -> LIEWrappedName name
 to_ie_post_rn (L l n)
-  | isTcOcc occ && isSymOcc occ = L l (IEType (L l n))
+  | isTcOcc occ && isSymOcc occ = L l (IEType (L l n))  -- starts with :, ->, etc
   | otherwise                   = L l (IEName (L l n))
   where occ = occName n
 

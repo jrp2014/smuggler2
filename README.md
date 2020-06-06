@@ -64,7 +64,7 @@ only need to add `-package smuggler2` to your `ghc-options`.
 ```Cabal
 common smuggler-options
   if flag(smuggler2)
-    ghc-options: -fplugin:Smuggler2.Plugin --package smuggler22
+    ghc-options: -fplugin:Smuggler2.Plugin --package smuggler2
 ```
 
 (You may need to install from a local copy using `cabal v1-install` for
@@ -105,8 +105,8 @@ original file.
 This will create output files with a `.new` suffix rather the overwriting the
 originals.
 
-Smuggler2 tries not to perform file changes when there are no unused imports or
-exports to be added or replaced. So you can just run `ghcid` as usual:
+Smuggler2 tries not to change files when there is no work to do.
+So you can just run `ghcid` as usual:
 
 ```bash
 $ ghcid --command='cabal repl'
@@ -116,11 +116,16 @@ If you add `-v` to your `ghc-options`
 
 ## Caveats
 
+- Because `cabal` and `ghc` don't have full support for distinguishing dependent
+  packages from plug-ins you will probably want to ensure that the build
+  dependencies for your project are installed into your local package db first,
+  before enabling sumuggler, otherwise they will all be processed by it too,
+  as your project builds, which should do no harm, but will increase your build time.
+
 `Smugggler2` is robust -- it can chew through the
-[agda](https://github.com/agda/agda) codebase of over 370 modules with complex
+[Agda](https://github.com/agda/agda) codebase of over 370 modules with complex
 interdependencies and be tripped over by only
 
-- a handful of pattern synonym imports,
 - a couple of ambiguous exports (are we trying to export something defined in
   the current module or something with the same name from an imported module)
 - and a couple of imports where both qualifed and unqualifed version of the
@@ -128,7 +133,7 @@ interdependencies and be tripped over by only
   version of the same names
 
 But there are some caveats, most of which are either easy enough to work around
-(and still benefit from a great reduction in keyboard work):
+(and still offer the benefit of a great reduction in keyboard work):
 
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
   them. (This is a more aggressive approach than `smuggler` which focuses on
@@ -172,9 +177,6 @@ But there are some caveats, most of which are either easy enough to work around
 
 - `hiding` clauses may not be properly analysed. So hiding things that are not
   used may not be spotted.
-
-- Certain syntax pattern imports may not be imported correctly (the `pattern`
-  keyword is missing)
 
 - The test suite does not seem to run reliably on Windows. This is probably more
   of an issue with the way that the tests are run, than `Smuggler2` itself.
@@ -296,10 +298,9 @@ changes.
 - `exactPrint`s the result back over the original file (or one with a different
   suffix, if that was specified as option to `smuggler2`)
 
-This round tripping is needed because the AST provided by GHC to `smuggler2` is
-of a different type from the AST that `ghc-exactprint` uses. (It is the product
-of the renaming phase of the compiler, while `ghc-exactprint` uses a parse phase
-AST.)
+This round tripping is needed because the AST that `ghc` provides does not have
+enough information in it to reconstitute the source (which is why
+`ghc-exactprint` exists).
 
 ### Exports
 

@@ -41,10 +41,10 @@ runParser dflags fileName fileContents = do
   case parseModuleFromStringInternal dflags' fileName fileContents of
     Left msg -> liftIO $ do
 #if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
-      fatalErrorMsg dflags (text "smuggler parse failure:")
+      fatalErrorMsg dflags (text "smuggler2 parse failure:")
       printBagOfErrors dflags msg
 #else
-      fatalErrorMsg dflags (text $ "smuggler parse failure: " ++
+      fatalErrorMsg dflags (text $ "smuggler2 parse failure: " ++
                             showSDoc dflags (ppr $ fst msg) ++ ": " ++ snd msg)
 #endif
       return $ Left ()

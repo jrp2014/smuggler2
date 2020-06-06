@@ -14,7 +14,6 @@ import Data.Generics as SYB (Data)
 import qualified Data.Map.Strict as Map (alter, fromList, insert, lookup, toList, union)
 import Data.Maybe (fromMaybe)
 import GHC (AnnKeywordId (AnnCloseP, AnnOpenP))
-import GHC.Hs.Extension ()
 import GhcPlugins (GenLocated (L), Located)
 import Language.Haskell.GHC.ExactPrint (Annotation (annEntryDelta, annPriorComments, annsDP),
                                         TransformT, modifyAnnsT, uniqueSrcSpanT)
