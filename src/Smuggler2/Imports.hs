@@ -15,7 +15,7 @@ import GHC
                  ideclSource),
       LIEWrappedName,
       LImportDecl )
-import HscTypes ( ModIface, ModIface_(mi_exports) )
+import HscTypes -- earlier versions of Ghc don't have ModIface_
 import LoadIface ( loadSrcInterface )
 import Name ( HasOccName(..), isDataOcc, isSymOcc, isTcOcc )
 import Outputable ( Outputable(ppr), text, (<+>) )
