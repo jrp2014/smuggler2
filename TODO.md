@@ -27,5 +27,6 @@
 
 - [ ] User ghc environment files instead of `cabal exec` to launch tests
 
-
 - [ ] Use NamedFieldPuns / RecordWildCards for Options
+
+- [ ] Check that an export does not need to be qualified

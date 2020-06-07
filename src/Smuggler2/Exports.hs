@@ -12,11 +12,11 @@ import Avail ( AvailInfo(..) )
 import GHC
     ( AnnKeywordId(AnnCloseP, AnnVal, AnnType, AnnPattern, AnnDotdot,
                    AnnOpenP),
+      GhcPs,
       IE(IEThingAbs, IEVar, IEThingAll),
       IEWrappedName(IEName, IEType, IEPattern),
       LIEWrappedName,
       RdrName )
-import GHC.Hs.Extension ( GhcPs )
 import GhcPlugins ( Located, mkVarUnqual )
 import Language.Haskell.GHC.ExactPrint ( TransformT )
 import Language.Haskell.GHC.ExactPrint.Types
