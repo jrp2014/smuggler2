@@ -1,7 +1,0 @@
-module QualUnqual (
-  test ) where
-
-import qualified Data.Char as C ( isDigit )
-import Data.Char ( isDigit )
-
-test x = C.isDigit x || isDigit x
