@@ -1,6 +1,8 @@
+{-# LANGUAGE PatternSynonyms #-}
 module Pattern where
 
-import Data.List.NonEmpty as List1
+import qualified Data.List.NonEmpty as List1
+import Data.List.NonEmpty (NonEmpty, pattern (:|), (<|))
 
 
 test = List1.cycle (1 :| [2,3]) 

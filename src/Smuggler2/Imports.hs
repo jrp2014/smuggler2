@@ -6,7 +6,7 @@ module Smuggler2.Imports (getMinimalImports) where
 import Avail (AvailInfo (..))
 import BasicTypes (StringLiteral (sl_fs))
 import FieldLabel (FieldLbl (flIsOverloaded, flLabel, flSelector))
-import GHC.Hs (GhcRn, IE (IEThingAbs, IEThingAll, IEThingWith, IEVar), IEWildcard (NoIEWildcard),
+import GHC (GhcRn, IE (IEThingAbs, IEThingAll, IEThingWith, IEVar), IEWildcard (NoIEWildcard),
                IEWrappedName (IEName, IEPattern, IEType),
                ImportDecl (ImportDecl, ideclHiding, ideclName, ideclPkgQual, ideclSource),
                LIEWrappedName, LImportDecl, noExtField)
