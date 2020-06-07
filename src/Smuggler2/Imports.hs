@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -- | Description:  A replacement for 'RnNames.getMinimalImports' that attempts
 -- to handle patterns and types, which is not done correctly in GHC 8.10.1 and
 -- earlier.
@@ -79,8 +80,15 @@ getMinimalImports = mapM mk_minimal
                             , ideclSource  = is_boot
                             , ideclPkgQual = mb_pkg } = decl
            ; iface <- loadSrcInterface doc mod_name is_boot (fmap sl_fs mb_pkg)
+#if MIN_VERSION_GLASGOW_HASKELL(8,8,0,0)
+           -- TODO not sure when this was introduced
            ; let used_avails = gresToAvailInfo used_gres
                  lies = map (L l) (concatMap (to_ie iface) used_avails)
+#else
+           -- used_gres are actually already AvailInfo in earlier versions of
+           -- GHC
+           ; let lies = map (L l) (concatMap (to_ie iface) used_gres)
+#endif
            ; return (L l (decl { ideclHiding = Just (False, L l lies) })) }
       where
         doc = text "Compute minimal imports for" <+> ppr decl
