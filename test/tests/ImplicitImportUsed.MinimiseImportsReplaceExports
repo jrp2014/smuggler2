@@ -1,0 +1,6 @@
+module Test.ImplicitImportUsed (
+  foo ) where
+
+import Data.List ( intercalate )
+
+foo = intercalate ","

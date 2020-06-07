@@ -1,13 +1,24 @@
-module Main (
-  main ) where
+module Main where
 
-import Data.Bool ( bool )
-import Data.List ()
-import Data.Maybe ( fromMaybe )
+import GHC.Paths
+import System.Environment
+import System.Exit
+import System.Process.Typed
+import Smuggler2.Plugin
 
 main :: IO ()
 main = do
-    let foo = fromMaybe bool Nothing
-    print (foo undefined undefined undefined :: Int)
-    print True
--- main = parseFile
+  args <- getArgs
+  runProcess
+    ( proc
+        ghc
+        ( "-v"
+            : "-dynamic"
+            : "-user-package-db"
+            : "-package-key smuggler2-0.3.3.2"
+            : "-package smuggler2"
+            : "-fplugin=Smuggler2,Plugin"
+            : args
+        )
+    )
+    >>= exitWith

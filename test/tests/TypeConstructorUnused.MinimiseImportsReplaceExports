@@ -1,0 +1,4 @@
+module Test.TypeConstructorUnused (
+  true ) where
+
+true = True

@@ -115,17 +115,15 @@ library
   if flag(debug)
     build-depends: text
 
--- Currently doesn't do anything much
-executable play-smuggler2
+executable ghc-smuggler2
   import:         common-options
   import:         executable-options
   hs-source-dirs: app
   main-is:        Main.hs
-
-  if flag(debug)
-    ghc-options: -fplugin=Smuggler2.Plugin
-
-  build-depends:  smuggler2
+  build-depends:
+    , ghc-paths
+    , typed-process
+    , smuggler2
 
 test-suite smuggler2-test
   import:         common-options
