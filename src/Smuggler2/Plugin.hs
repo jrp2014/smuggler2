@@ -108,13 +108,16 @@ smugglerPlugin clopts modSummary tcEnv
       then return tcEnv
       else do
         dflags <- getDynFlags
-        liftIO $ compilationProgressMsg dflags ("smuggler: " ++ showVersion version)
+        liftIO $ compilationProgressMsg dflags ("smuggler2 " ++ showVersion version)
 
         -- Dump GHC's view of what the minimal imports are for the current
         -- module, so that they can be annotated when parsed back in
-        -- This is needed because 'getMinimalImports` returns a list of import
-        -- declarations that are `GhcRn` but `ghc-exactPrint` operates in
-        -- `GhcPs`
+        -- This is needed because there too much information loss between
+        -- the parsed and renamed AST to use the latter for reconstituting the
+        -- source.  An alternative would be to  "index" each name location with
+        -- a SrcSpan to allow the name matchup, and to make the 'ParsedSource' a
+        -- 100% representation of the original source (modulo tabs, trailing
+        -- whitespace per line).
         let minImpFilePath = mkMinimalImportsPath dflags (ms_mod modSummary)
         printMinimalImports' dflags minImpFilePath usage
 

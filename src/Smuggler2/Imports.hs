@@ -3,21 +3,27 @@
 -- earlier.
 module Smuggler2.Imports (getMinimalImports) where
 
-import Avail (AvailInfo (..))
-import BasicTypes (StringLiteral (sl_fs))
-import FieldLabel (FieldLbl (flIsOverloaded, flLabel, flSelector))
-import GHC (GhcRn, IE (IEThingAbs, IEThingAll, IEThingWith, IEVar), IEWildcard (NoIEWildcard),
-               IEWrappedName (IEName, IEPattern, IEType),
-               ImportDecl (ImportDecl, ideclHiding, ideclName, ideclPkgQual, ideclSource),
-               LIEWrappedName, LImportDecl, noExtField)
-import HscTypes (ModIface, ModIface_ (mi_exports))
-import LoadIface (loadSrcInterface)
-import Name (HasOccName (..), isDataOcc, isSymOcc, isTcOcc)
-import Outputable (Outputable (ppr), text, (<+>))
-import RdrName (gresToAvailInfo)
-import RnNames (ImportDeclUsage)
-import SrcLoc (GenLocated (L), Located, noLoc)
-import TcRnMonad (RnM)
+import Avail ( AvailInfo(..) )
+import BasicTypes ( StringLiteral(sl_fs) )
+import FieldLabel ( FieldLbl(flIsOverloaded, flLabel, flSelector) )
+import GHC
+    ( GhcRn,
+      IE(IEThingAbs, IEThingAll, IEThingWith, IEVar),
+      IEWildcard(NoIEWildcard),
+      IEWrappedName(IEName, IEPattern, IEType),
+      ImportDecl(ImportDecl, ideclHiding, ideclName, ideclPkgQual,
+                 ideclSource),
+      LIEWrappedName,
+      LImportDecl )
+import HscTypes ( ModIface, ModIface_(mi_exports) )
+import LoadIface ( loadSrcInterface )
+import Name ( HasOccName(..), isDataOcc, isSymOcc, isTcOcc )
+import Outputable ( Outputable(ppr), text, (<+>) )
+import RdrName ( gresToAvailInfo )
+import RnNames ( ImportDeclUsage )
+import SrcLoc ( GenLocated(L), Located, noLoc )
+import TcRnMonad ( RnM )
+import Language.Haskell.GHC.ExactPrint.Types ( noExt )
 
 {-
 Note [Partial export]
@@ -84,34 +90,34 @@ getMinimalImports = mapM mk_minimal
     -- we want to say "T(..)", but if we're importing only a subset we want
     -- to say "T(A,B,C)".  So we have to find out what the module exports.
     to_ie _ (Avail n) -- An ordinary identifier (eg,  var, data constructor)
-       = [IEVar noExtField (to_ie_post_rn_var $ noLoc n)]
+       = [IEVar noExt (to_ie_post_rn_var $ noLoc n)]
     to_ie _ (AvailTC n [m] []) -- type or class with absent () list
-       | n==m = [IEThingAbs noExtField (to_ie_post_rn $ noLoc n)]
+       | n==m = [IEThingAbs noExt (to_ie_post_rn $ noLoc n)]
     to_ie iface (AvailTC n ns fs)
       = case [(xs,gs) |  AvailTC x xs gs <- mi_exports iface
                  , x == n
                  , x `elem` xs    -- Note [Partial export]
                  ] of
            -- class / type with methods / constructors
-           [xs] | all_used xs -> [IEThingAll noExtField (to_ie_post_rn_var $ noLoc n)] -- (..)
+           [xs] | all_used xs -> [IEThingAll noExt (to_ie_post_rn_var $ noLoc n)] -- (..)
 
                 | isTcOcc (occName n) -> -- class
-                   [IEThingWith noExtField (to_ie_post_rn $ noLoc n) NoIEWildcard
+                   [IEThingWith noExt (to_ie_post_rn $ noLoc n) NoIEWildcard
                                 (map (to_ie_post_rn_tc . noLoc) (filter (/= n) ns))
                                 (map noLoc fs)]
                                           -- Note [Overloaded field import]
 
                 | otherwise   -> -- type
-                   [IEThingWith noExtField (to_ie_post_rn $ noLoc n) NoIEWildcard
+                   [IEThingWith noExt (to_ie_post_rn $ noLoc n) NoIEWildcard
                                 (map (to_ie_post_rn . noLoc) (filter (/= n) ns))
                                 (map noLoc fs)]
 
            -- record type
            _other | all_non_overloaded fs
-                           -> map (IEVar noExtField . to_ie_post_rn . noLoc) $ ns
+                           -> map (IEVar noExt . to_ie_post_rn . noLoc) $ ns
                                  ++ map flSelector fs
                   | otherwise -> -- DuplicateRecordFields is applicable
-                      [IEThingWith noExtField (to_ie_post_rn $ noLoc n) NoIEWildcard
+                      [IEThingWith noExt (to_ie_post_rn $ noLoc n) NoIEWildcard
                                 (map (to_ie_post_rn . noLoc) (filter (/= n) ns))
                                 (map noLoc fs)]
         where
