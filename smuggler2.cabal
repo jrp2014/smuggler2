@@ -121,8 +121,8 @@ executable ghc-smuggler2
   hs-source-dirs: app
   main-is:        Main.hs
   build-depends:
-    , ghc-paths
-    , typed-process
+    , ghc-paths      ^>=0.1.0
+    , typed-process  ^>=0.2.6
 
 test-suite smuggler2-test
   import:         common-options
