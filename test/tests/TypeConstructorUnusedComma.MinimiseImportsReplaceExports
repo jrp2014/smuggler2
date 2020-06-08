@@ -1,4 +1,0 @@
-module Test.TypeConstructorUnusedComma (
-  false ) where
-
-false = False

@@ -1,6 +1,0 @@
-module Test.MultilineUnused where
-
-import Data.Bool ( bool )
-import Data.List ()
-
-foo = bool

@@ -1,6 +1,0 @@
-module Test.ConstructorsUnused (
-  foo ) where
-
-import Data.Bool (Bool (True, False), not)
-
-foo = not

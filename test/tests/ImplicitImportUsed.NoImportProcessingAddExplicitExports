@@ -1,6 +1,0 @@
-module Test.ImplicitImportUsed (
-  foo ) where
-
-import Data.List
-
-foo = intercalate ","
