@@ -23,6 +23,10 @@ import to include only the names that are used.
 
 ## How to use
 
+Install `smuggler2` using `cabal install --lib smuggler2`.
+
+If you also want the `ghc` wrapper, install it using `cabal install exe:smuggler2`.
+
 ### Adding Smuggler2 to your dependencies
 
 Add `smuggler2` to the dependencies of your project and to your compiler flags.
@@ -37,7 +41,7 @@ flag smuggler2
 
 common smuggler-options
   if flag(smuggler2)
-    ghc-options: -fplugin:Smuggler2.Plugin
+    ghc-options: -fplugin=Smuggler2.Plugin
     build-depends: smuggler2 >= 0.3
 ```
 
@@ -59,21 +63,28 @@ means that you can also exclude `smuggler2` dependencies from your final builds.
 ### Alternatively, using a local version
 
 If you have installed `smuggler2` from a local copy of this repository, you may
-only need to add `-package smuggler2` to your `ghc-options`.
+need to add `-package smuggler2` to your `ghc-options` if you did not
+install using the `--lib` flag to `cabal install`.
 
-```Cabal
-common smuggler-options
-  if flag(smuggler2)
-    ghc-options: -fplugin:Smuggler2.Plugin --package smuggler2
+### Or use a `ghc` wrapper
+
+The `smuggler2` package provides an executable `ghc-smuggler2` that calls `ghc`
+with the `-fplugin=Smuggler2.Plugin` argument (followed by any others that you
+supply). This allows you to run the plugin over your sources without modifying
+your `.cabal` file:
+
+```bash
+$ cabal build -with-compiler=ghc-smuggler2
 ```
-
-(You may need to install from a local copy using `cabal v1-install` for
-`smuggler2` to be recognised, perhaps depending on your version of `cabal`.)
+or just
+```bash
+$ cabal build -w ghc-smuggler2
+```
 
 ### Options
 
-`Smuggler2` has several (case-insensitive) options, which can be set by adding a
-`-fplugin-opt=Smuggler2.Plugin:` to your `ghc-options`
+`Smuggler2` has several (case-insensitive) options, which can be set by adding
+`-fplugin-opt=Smuggler2.Plugin:` flags to your `ghc-options`
 
 - `NoImportProcessing` - do no import processing
 - `PreserveInstanceImports` - remove unused imports, but preserve a library
@@ -99,7 +110,7 @@ the option value (`new` in the following example) rather than replacing the
 original file.
 
 ```Cabal
-    ghc-options: -fplugin:Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
+    ghc-options: -fplugin=Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
 ```
 
 This will create output files with a `.new` suffix rather the overwriting the
@@ -112,7 +123,6 @@ So you can just run `ghcid` as usual:
 $ ghcid --command='cabal repl'
 ```
 
-If you add `-v` to your `ghc-options`
 
 ## Caveats
 

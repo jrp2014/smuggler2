@@ -11,7 +11,8 @@ build:
 	cabal build # --write-ghc-environment-files=always
 
 install:
-	cabal install --lib
+	cabal install --lib smuggler2
+	cabal install exe:ghc-smuggler2 --overwrite-policy=always
 
 test: build
 	git diff --check

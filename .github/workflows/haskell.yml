@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: ${{matrix.os }} - GHC ${{ matrix.ghc }}, Cabal ${{ matrix.cabal }}
+    name: ${{matrix.ghc }}-${{ matrix.os }}, ${{ matrix.cabal }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     strategy:
@@ -49,7 +49,7 @@ jobs:
       - name: Build
         run: |
           cabal update
-          cabal build all --enable-tests --write-ghc-environment-files=always
+          cabal build all --enable-tests
 
       - name: Test
         run: |
