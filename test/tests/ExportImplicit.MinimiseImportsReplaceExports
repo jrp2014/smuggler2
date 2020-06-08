@@ -1,0 +1,13 @@
+module Test.ExportImplicit (
+  isExported,
+  alsoExported,
+  main ) where
+
+import Data.Char ( toLower )
+
+isExported = (+1)
+
+alsoExported = map toLower "AbC"
+
+main :: IO ()
+main = print $ isExported 1

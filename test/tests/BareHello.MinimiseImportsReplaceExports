@@ -1,0 +1,4 @@
+module BareHello (
+  main ) where
+
+main = putStrLn "Hello, World"
