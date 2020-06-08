@@ -1,10 +1,11 @@
-module Main where
+module Main (
+  main ) where
 
-import GHC.Paths
-import Smuggler2.Plugin
-import System.Environment
-import System.Exit
+import GHC.Paths ( ghc )
+import System.Environment ( getArgs )
+import System.Exit ( exitWith )
 import System.Process.Typed
+    ( runProcess, setEnvInherit, setWorkingDirInherit, shell )
 
 main :: IO ()
 main = do
@@ -13,7 +14,7 @@ main = do
     ( setWorkingDirInherit . setEnvInherit $
         shell
           ( ghc
-              ++ "-fplugin=Smuggler2,Plugin "
+              ++ " -fplugin=Smuggler2.Plugin "
               ++ unwords args
           )
     )
