@@ -9,9 +9,11 @@ import qualified Data.Set as Set (fromList, member)
 import GHC.Paths (ghc)
 import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Directory (doesDirectoryExist, getDirectoryContents)
+import System.Environment (lookupEnv)
 import System.FilePath ((-<.>), (</>), takeBaseName, takeExtension)
 import System.Process.Typed
-  ( proc,
+  ( ProcessConfig,
+    proc,
     runProcess_,
     setEnvInherit,
     setWorkingDirInherit,
@@ -111,17 +113,25 @@ main = defaultMain =<< testOptions optionsList
 -- picked up from the local database.  GHC alone would use the global one.
 compile :: FilePath -> Options -> IO ()
 compile testcase opts = do
-  runProcess_ $
+  cabalPath <- lookupEnv "CABAL" -- find, eg, @/opt/ghc/bin/cabal@ or @cabal -vnormal+nowrap@
+  let cabalCmd = words $ fromMaybe "cabal" cabalPath -- default to @cabal@ if @CABAL@ is not set
+  let cabalConfig =
         setWorkingDirInherit . setEnvInherit $
-          proc ghc  ghcCmd 
+          proc
+            (head cabalCmd)
+            (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
+  runProcess_ cabalConfig
   where
-    ghcCmd :: [String]
-    ghcCmd = 
-      -- - it is necessary to mention the smuggler2 package explicitly,
-      --   to pick up the local version.  It appears to be hidden otherwise.
+    cabalArgs :: [String]
+    cabalArgs =
+      -- - not sure why it is necessary to mention the smuggler2 package explicitly,
+      --   but it appears to be hidden otherwise.
       -- - This also puts the .imports files that smuggler generates somewhere they
       --   can easily be found
-     [  
+      [ "--with-compiler=" ++ ghc,
+        "exec",
+        ghc,
+        "--",
         "-package smuggler2",
         "-v0",
         "-dumpdir=" ++ testDir,
