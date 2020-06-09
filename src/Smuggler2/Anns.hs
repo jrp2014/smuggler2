@@ -15,8 +15,12 @@ import qualified Data.Map.Strict as Map (alter, fromList, insert, lookup, toList
 import Data.Maybe (fromMaybe)
 import GHC (AnnKeywordId (AnnCloseP, AnnOpenP))
 import GhcPlugins (GenLocated (L), Located)
-import Language.Haskell.GHC.ExactPrint (Annotation (annEntryDelta, annPriorComments, annsDP),
-                                        TransformT, modifyAnnsT, uniqueSrcSpanT)
+import Language.Haskell.GHC.ExactPrint
+  ( Annotation (annEntryDelta, annPriorComments, annsDP),
+    TransformT,
+    modifyAnnsT,
+    uniqueSrcSpanT,
+  )
 import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (..), KeywordId (G), annNone, mkAnnKey)
 
 -- Inspired by retrie

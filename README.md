@@ -42,7 +42,7 @@ flag smuggler2
 common smuggler-options
   if flag(smuggler2)
     ghc-options: -fplugin=Smuggler2.Plugin
-    build-depends: smuggler2 >= 0.3
+    build-depends: smuggler2 >= 0.3 && < 0.4
 ```
 
 and then `import: smuggler-options` in the appropriate `library` or `executable`
@@ -76,12 +76,14 @@ your `.cabal` file:
 ```bash
 $ cabal build -with-compiler=ghc-smuggler2
 ```
+
 or just
+
 ```bash
 $ cabal build -w ghc-smuggler2
 ```
 
-### Options
+## Options
 
 `Smuggler2` has several (case-insensitive) options, which can be set by adding
 `-fplugin-opt=Smuggler2.Plugin:` flags to your `ghc-options`
@@ -123,16 +125,15 @@ So you can just run `ghcid` as usual:
 $ ghcid --command='cabal repl'
 ```
 
-
 ## Caveats
 
-- Because `cabal` and `ghc` don't have full support for distinguishing dependent
-  packages from plug-ins you will probably want to ensure that the build
-  dependencies for your project are installed into your local package db first,
-  before enabling sumuggler, otherwise they will all be processed by it too,
-  as your project builds, which should do no harm, but will increase your build time.
+Because `cabal` and `ghc` don't have full support for distinguishing dependent
+packages from plug-ins you will probably want to ensure that the build
+dependencies for your project are installed into your local package db first,
+before enabling sumuggler, otherwise they will all be processed by it too,
+as your project builds, which should do no harm, but will increase your build time.
 
-`Smugggler2` is robust -- it can chew through the
+`Smuggler2` is robust -- it can chew through the
 [Agda](https://github.com/agda/agda) codebase of over 370 modules with complex
 interdependencies and be tripped over by only
 
@@ -141,16 +142,20 @@ interdependencies and be tripped over by only
 - and a couple of imports where both qualifed and unqualifed version of the
   module are imported and there are references to both qualified and unqualifed
   version of the same names
+- some qualified record fields are overlooked
 
 But there are some caveats, most of which are either easy enough to work around
 (and still offer the benefit of a great reduction in keyboard work):
 
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
   them. (This is a more aggressive approach than `smuggler` which focuses on
-  removing redundant imports.) It has advantages and disadvantages. The
-  advantage is that a minimal set of imports is generated in a reproducable
-  format. The disdvantage is that imports may be reordered, comments and
-  blankdropped, external imports mixed with external, etc.
+  removing redundant imports.) It has advantages and disadvantages.
+  The advantage is that a minimal set of imports is generated in a reproducable
+  format. So you can just import a library without specifying any specific
+  imports and `Smuggler2` will add an explict list of things that are
+  used from it. This can be a useful check and better document your modules.
+  The disdvantage is that imports may be reordered, comments and
+  blank lines dropped, external imports mixed with external, etc.
 
 - By default `Smuggler2` does not remove imports completely because an import
   may be being used to only import instances of typeclasses, So it will leave
@@ -167,7 +172,8 @@ But there are some caveats, most of which are either easy enough to work around
 - CPP files will not be processed correctly: the imports will be generated for
   current CPP settings and any CPP annotations in the import block will be
   discarded. This may be a particular problem if you are writing code for
-  several generations of `ghc` and `base` for example.
+  several generations of `ghc` and `base` for example. Nevetheless, `Smuggler2`
+  will generate a new CPP preprocessed output file with a `-cpp` suffix.
   [retrie](https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs)
   solves this problem generating all possible versions of the module
   (exponential in the number of `#if` directives), operating on each version
@@ -183,15 +189,16 @@ But there are some caveats, most of which are either easy enough to work around
 - Multiple separate import lines referring to the same library are not
   consolidated
 
-- Literate Haskell `lhs` files are not supported
+- Literate Haskell `.lhs` files will procssed into ordinary haskell files a
+  `-lhs` suffix.
 
-- `hiding` clauses may not be properly analysed. So hiding things that are not
+* `hiding` clauses may not be properly analysed. So hiding things that are not
   used may not be spotted.
 
-- The test suite does not seem to run reliably on Windows. This is probably more
+* The test suite does not seem to run reliably on Windows. This is probably more
   of an issue with the way that the tests are run, than `Smuggler2` itself.
 
-- Currently `cabal` does not have a particular way of specifying plugins. (See,
+* Currently `cabal` does not have a particular way of specifying plugins. (See,
   eg, https://gitlab.haskell.org/ghc/ghc/issues/11244 and
   https://github.com/haskell/cabal/issues/2965) which would allow cleaner
   separation of user code and plugin-code

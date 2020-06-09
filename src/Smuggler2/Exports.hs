@@ -1,8 +1,9 @@
 -- |
 -- Description: Utility functions for generating an export list ast and
--- associated Anns.  It's a bit fiddlier than it could be because ghc's
--- functions for producing exportable things generates @AvailInfo@ from which we
--- need to reconstitue @IEWrappedName@ and then @IE@
+--              associated Anns.  It's a bit fiddlier than it could be because ghc's
+--              functions for producing exportable things generates @AvailInfo@ from which we
+--              need to reconstitue @IEWrappedName@ and then @IE@
+
 module Smuggler2.Exports
   ( mkExportAnnT
   )

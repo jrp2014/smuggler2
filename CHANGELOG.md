@@ -5,6 +5,9 @@ Notable changes to `Smuggler2`
 `smuggler2` uses [PVP Versioning][1].
 The change log is available [on GitHub][2].
 
+##  [0.3.4.1]: --  9 June 2020
+- Place output from CPP and literate Haskell sources into new files
+
 ##  [0.3.3.2]: --  8 June 2020
 - pattern synonyms and type families are handled
 - ghc-smuggler2 wrapper for ghc

@@ -1,7 +1,6 @@
-{-|
- Description: provides a wrapper around the 'ghc-exactprint' parser
- -}
 {-# LANGUAGE CPP #-}
+-- |
+-- Description: provides a wrapper around the 'ghc-exactprint' parser
 
 module Smuggler2.Parser
   ( runParser,
@@ -14,11 +13,11 @@ import GHC (ParsedSource)
 import Language.Haskell.GHC.ExactPrint (Anns)
 import Language.Haskell.GHC.ExactPrint.Parsers (parseModuleFromStringInternal)
 #if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
-import ErrUtils (fatalErrorMsg, printBagOfErrors)
+import ErrUtils (fatalErrorMsg, printBagOfErrors )
 import Outputable (text)
 #else
 import ErrUtils (fatalErrorMsg)
-import Outputable (ppr, showSDoc, text)
+--import Outputable (ppr, showSDoc, text)
 #endif
 import TcRnTypes (RnM)
 

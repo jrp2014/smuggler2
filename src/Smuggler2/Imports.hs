@@ -1,7 +1,8 @@
 {-# LANGUAGE CPP #-}
--- | Description:  A replacement for 'RnNames.getMinimalImports' that attempts
--- to handle patterns and types, which is not done correctly in GHC 8.10.1 and
--- earlier.
+-- |
+-- Description:  A replacement for 'RnNames.getMinimalImports' that attempts
+--               to handle patterns and types, which is not done correctly in GHC 8.10.1 and
+--               earlier.
 module Smuggler2.Imports (getMinimalImports) where
 
 import Avail ( AvailInfo(..) )
@@ -20,7 +21,9 @@ import HscTypes -- earlier versions of Ghc don't have ModIface_
 import LoadIface ( loadSrcInterface )
 import Name ( HasOccName(..), isDataOcc, isSymOcc, isTcOcc )
 import Outputable ( Outputable(ppr), text, (<+>) )
+#if MIN_VERSION_GLASGOW_HASKELL(8,8,0,0)
 import RdrName ( gresToAvailInfo )
+#endif
 import RnNames ( ImportDeclUsage )
 import SrcLoc ( GenLocated(L), Located, noLoc )
 import TcRnMonad ( RnM )

@@ -27,6 +27,8 @@ accept:
 
 doc:
 	cabal haddock
+	cabal v2-haddock --haddock-for-hackage --enable-doc
+#	cabal upload -d --publish dist-newstyle/smuggler2-0.3.x.y-docs.tar.gz
 
 hlint:
 	hlint src test/Test.hs

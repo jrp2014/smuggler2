@@ -1,12 +1,13 @@
 # Things to be done
 
-- [ ] does hiding work?
+- [ ] Does hiding work? No, as ghc doesn't check them
 
-- [ ] does CPP work? (should do)
+- [X] Does CPP work? Yes, but the mark is dropped, so put output into a new
+  file.  Similarly for literate Haskell.
 
-- [ ] Script to generate new test (from template?)
+- [x] Script to generate new test (from template?) Not worth the effort
 
-- [ ] get tasty-golden to delete successful results and update tests where
+- [X] get tasty-golden to delete successful results and update tests where
       smuggler makes no changes
 
 - [ ] refactor the much more sophisticated https://github.com/ddssff/refact-global-hse
@@ -17,15 +18,16 @@
       it creates race conditions because both cases will generate the same minimum
       imprts dump file
 
-- [ ] Do a better job of preserving imported pattern annotation.
+- [X] Do a better job of preserving imported pattern annotation.
 
-- [ ] Check that type imports / exports work, Type Operators, 
+- [X] Check that type imports / exports work, Type Operators,
 
 - [X] Running test suite on both an imported module and the module that imports
       it creates race conditions because both cases will generate the same minimum
       imports dump file
 
-- [ ] User ghc environment files instead of `cabal exec` to launch tests
+- [x] User ghc environment files instead of `cabal exec` to launch tests.  But
+  these are invisible and so likely to trip you up
 
 - [ ] Use NamedFieldPuns / RecordWildCards for Options
 
