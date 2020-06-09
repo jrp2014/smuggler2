@@ -32,3 +32,5 @@
 - [ ] Use NamedFieldPuns / RecordWildCards for Options
 
 - [ ] Check that an export does not need to be qualified
+
+- [ ]- Figure out fhy github workflow uses ghc 8.10.1 when it should be running 8.8.3

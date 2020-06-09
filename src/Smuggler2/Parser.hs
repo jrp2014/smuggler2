@@ -17,7 +17,7 @@ import ErrUtils (fatalErrorMsg, printBagOfErrors )
 import Outputable (text)
 #else
 import ErrUtils (fatalErrorMsg)
---import Outputable (ppr, showSDoc, text)
+import Outputable (ppr, showSDoc, text)
 #endif
 import TcRnTypes (RnM)
 
