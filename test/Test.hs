@@ -59,7 +59,9 @@ goldenTests opts = do
       testName
       [ goldenVsFileDiff
           (takeBaseName testFile) -- test name
-          (\ref new -> ["git", "diff", "--no-index", ref, new]) -- how to display diffs
+          -- The -G. is needed because cabal sdist changes the golden file
+          -- permissions and so all the tests fail.
+          (\ref new -> ["git", "diff", "--no-index", "-G.", ref, new]) -- how to display diffs
           (testFile -<.> testName ++ "-golden") -- golden file
           outputFilename
           ( do
