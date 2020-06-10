@@ -5,6 +5,9 @@ Notable changes to `Smuggler2`
 `smuggler2` uses [PVP Versioning][1].
 The change log is available [on GitHub][2].
 
+##  [0.3.4.2]: --  10 June 2020
+- Add test golden files to the distribution
+
 ##  [0.3.4.1]: --  9 June 2020
 - Place output from CPP and literate Haskell sources into new files
 

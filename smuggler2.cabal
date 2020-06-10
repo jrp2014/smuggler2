@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               smuggler2
-version:            0.3.4.1
+version:            0.3.4.2
 synopsis:
   GHC Source Plugin that helps to minimise imports and generate explicit exports
 
@@ -28,6 +28,12 @@ extra-doc-files:
 
 extra-source-files:
   test/tests/**/*.hs
+  test/tests/**/*.MinimiseImportsNoExportProcessing-golden
+  test/tests/**/*.MinimiseImportsReplaceExports-golden
+  test/tests/**/*.NoImportProcessingAddExplicitExports-golden
+  test/tests/**/*.NoImportProcessingNoExportProcessing-golden
+  test/tests/**/*.NoImportProcessingReplaceExports-golden
+  test/tests/**/*.PreserveInstanceImportsNoExportProcessing-golden
   Makefile
   Setup.hs
   weeder.dhall
@@ -72,15 +78,12 @@ common common-options
 
   -- Most of these are unnecessary
   default-extensions:
-    DeriveGeneric
-    GeneralizedNewtypeDeriving
+    FlexibleContexts
+    FlexibleInstances
     InstanceSigs
     LambdaCase
-    OverloadedStrings
-    RecordWildCards
-    ScopedTypeVariables
-    StandaloneDeriving
-    TypeApplications
+    MultiParamTypeClasses
+    TupleSections
 
 common executable-options
   ghc-options: -rtsopts
