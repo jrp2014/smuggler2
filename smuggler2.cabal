@@ -27,7 +27,7 @@ extra-doc-files:
   TODO.md
 
 extra-source-files:
-  test/tests/*.hs
+  test/tests/**/*.hs
   Makefile
   Setup.hs
   weeder.dhall
