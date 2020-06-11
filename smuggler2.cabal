@@ -18,7 +18,7 @@ license:            MPL-2.0
 license-file:       LICENSE
 author:             jrp2014, Dmitrii Kovanikov, Veronika Romashkina
 maintainer:         jrp2014
-copyright:          2020 jrp2014, Dmitrii Kovanikov
+copyright:          2020 jrp2014, Dmitrii Kovanikov, Veronika Romashkina
 category:           Development, Refactoring, Compiler Plugin
 build-type:         Simple
 extra-doc-files:
