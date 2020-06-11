@@ -7,70 +7,93 @@ module Smuggler2.Plugin
   )
 where
 
-import Avail ( AvailInfo, Avails )
-import Control.Monad ( unless )
-import Data.Bool ( bool )
-import Data.Maybe ( fromMaybe, isNothing )
-import Data.Version ( showVersion )
+import Avail (AvailInfo, Avails)
+import Control.Monad (unless)
+import Data.Bool (bool)
+import Data.Maybe (fromMaybe, isNothing)
+import Data.Version (showVersion)
 import DynFlags
-    ( DynFlags(dumpDir), HasDynFlags(getDynFlags), xopt )
-import ErrUtils ( compilationProgressMsg, fatalErrorMsg )
+  ( DynFlags (dumpDir),
+    HasDynFlags (getDynFlags),
+    xopt,
+  )
+import ErrUtils (compilationProgressMsg, fatalErrorMsg)
 import GHC
-    ( GenLocated(L),
-      GhcPs,
-      HsModule(hsmodExports, hsmodImports),
-      ImportDecl(ideclHiding, ideclImplicit),
-      LIE,
-      LImportDecl,
-      Located,
-      ms_location,
-      ml_hs_file,
-      ModSummary(ms_hspp_buf, ms_mod),
-      Module(moduleName),
-      ParsedSource,
-      moduleNameString,
-      unLoc )
-import GHC.LanguageExtensions ( Extension(Cpp) )
-import GHC.IO.Encoding ( setLocaleEncoding, utf8 )
-import IOEnv ( MonadIO(liftIO), readMutVar )
+  ( GenLocated (L),
+    GhcPs,
+    HsModule (hsmodExports, hsmodImports),
+    ImportDecl (ideclHiding, ideclImplicit, ideclName),
+    LIE,
+    LImportDecl,
+    Located,
+    ModSummary (ms_hspp_buf, ms_mod),
+    Module (moduleName),
+    ParsedSource,
+    ml_hs_file,
+    moduleNameString,
+    ms_location,
+    unLoc,
+  )
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import GHC.LanguageExtensions (Extension (Cpp))
+import IOEnv (MonadIO (liftIO), readMutVar)
 import Language.Haskell.GHC.ExactPrint
-    ( Anns,
-      TransformT,
-      addTrailingCommaT,
-      exactPrint,
-      graftT,
-      runTransform,
-      setEntryDPT )
-import Language.Haskell.GHC.ExactPrint.Types ( DeltaPos(DP) )
+  ( Anns,
+    TransformT,
+    addTrailingCommaT,
+    exactPrint,
+    graftT,
+    runTransform,
+    setEntryDPT,
+  )
+import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (DP))
 import Outputable
-    ( Outputable(ppr), neverQualify, printForUser, text, vcat )
-import Paths_smuggler2 ( version )
+  ( Outputable (ppr),
+    neverQualify,
+    printForUser,
+    text,
+    vcat,
+  )
+import Paths_smuggler2 (version)
 import Plugins
-    ( CommandLineOption,
-      Plugin(pluginRecompile, typeCheckResultAction),
-      defaultPlugin,
-      purePlugin )
-import RnNames ( ImportDeclUsage, findImportUsage )
-import Smuggler2.Anns ( mkLoc, mkParenT )
-import Smuggler2.Imports ( getMinimalImports )
-import Smuggler2.Exports ( mkExportAnnT )
+  ( CommandLineOption,
+    Plugin (pluginRecompile, typeCheckResultAction),
+    defaultPlugin,
+    purePlugin,
+  )
+import RnNames (ImportDeclUsage, findImportUsage)
+import Smuggler2.Anns (mkLoc, mkParenT)
+import Smuggler2.Exports (mkExportAnnT)
+import Smuggler2.Imports (getMinimalImports)
 import Smuggler2.Options
-    ( ExportAction(AddExplicitExports, NoExportProcessing,
-                   ReplaceExports),
-      ImportAction(MinimiseImports, NoImportProcessing),
-      Options(exportAction, importAction, newExtension),
-      parseCommandLineOptions )
-import Smuggler2.Parser ( runParser )
-import StringBuffer ( StringBuffer(StringBuffer), lexemeToString )
-import System.Directory ( removeFile )
-import System.FilePath ( (-<.>), (</>), isExtensionOf, takeExtension )
-import System.IO ( IOMode(WriteMode), withFile )
-import TcRnExports ( exports_from_avail )
+  ( ExportAction
+      ( AddExplicitExports,
+        NoExportProcessing,
+        ReplaceExports
+      ),
+    ImportAction (MinimiseImports, NoImportProcessing),
+    Options (exportAction, importAction, leaveOpenImports, newExtension),
+    parseCommandLineOptions,
+  )
+import Smuggler2.Parser (runParser)
+import StringBuffer (StringBuffer (StringBuffer), lexemeToString)
+import System.Directory (removeFile)
+import System.FilePath ((-<.>), (</>), isExtensionOf, takeExtension)
+import System.IO (IOMode (WriteMode), withFile)
+import TcRnExports (exports_from_avail)
 import TcRnTypes
-    ( TcGblEnv(tcg_rdr_env, tcg_imports, tcg_mod, tcg_exports,
-               tcg_rn_imports, tcg_used_gres, tcg_rn_exports),
-      TcM,
-      RnM )
+  ( RnM,
+    TcGblEnv
+      ( tcg_exports,
+        tcg_imports,
+        tcg_mod,
+        tcg_rdr_env,
+        tcg_rn_exports,
+        tcg_rn_imports,
+        tcg_used_gres
+      ),
+    TcM,
+  )
 
 -- | 'Plugin' interface to GHC
 plugin :: Plugin
@@ -192,7 +215,6 @@ smugglerPlugin clopts modSummary tcEnv
               -- Clean up: delete the GHC-generated imports file
               liftIO $ removeFile minImpFilePath
           where
-
             -- Generates the things that would be exportabe if there were no
             -- explicit export header, so suitable for replacing one
             exportable :: RnM [AvailInfo]
@@ -279,7 +301,16 @@ smugglerPlugin clopts modSummary tcEnv
                 -- we never qualify things inside there
                 -- E.g.   import Blag( f, b )
                 -- not    import Blag( Blag.f, Blag.g )!
-                printForUser dflags h neverQualify (vcat (map ppr (filter (letThrough . unLoc) imports')))
+                printForUser
+                  dflags
+                  h
+                  neverQualify
+                  ( vcat
+                      ( map
+                          (ppr . leaveOpen (leaveOpenImports options))
+                          (filter letThrough imports')
+                      )
+                  )
             )
       where
         notImplicit :: ImportDecl pass -> Bool
@@ -290,9 +321,14 @@ smugglerPlugin clopts modSummary tcEnv
           _ -> True
         keepInstanceOnlyImports :: Bool
         keepInstanceOnlyImports = importAction options /= MinimiseImports
-        letThrough :: ImportDecl pass -> Bool
-        letThrough i = notImplicit i && (keepInstanceOnlyImports || notInstancesOnly i)
-
+        letThrough :: LImportDecl pass -> Bool
+        letThrough (L _ i) = notImplicit i && (keepInstanceOnlyImports || notInstancesOnly i)
+        leaveOpen :: [String] -> LImportDecl pass -> LImportDecl pass
+        leaveOpen modules (L l decl) = L l $ case ideclHiding decl of
+          Just (False, L l' _)
+            | (moduleNameString . unLoc $ ideclName decl) `elem` modules ->
+              decl {ideclHiding = Nothing}
+          _ -> decl
     -- Construct the path into which GHC's version of minimal imports is dumped
     mkMinimalImportsPath :: DynFlags -> Module -> FilePath
     mkMinimalImportsPath dflags this_mod
@@ -303,9 +339,7 @@ smugglerPlugin clopts modSummary tcEnv
           "smuggler2-" ++ moduleNameString (moduleName this_mod) ++ "."
             ++ fromMaybe "smuggler2" (newExtension options)
             ++ ".imports"
-
     options :: Options
     options = parseCommandLineOptions clopts
-
     strBufToStr :: StringBuffer -> String
     strBufToStr sb@(StringBuffer _ len _) = lexemeToString sb len

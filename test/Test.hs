@@ -28,16 +28,16 @@ testDir = "test" </> "tests"
 -- | Combinations of import and export action options to be tested
 optionsList :: [Options]
 optionsList =
-  [ mkOptions PreserveInstanceImports NoExportProcessing,
-    mkOptions MinimiseImports ReplaceExports,
-    mkOptions MinimiseImports NoExportProcessing,
-    mkOptions NoImportProcessing AddExplicitExports,
-    mkOptions NoImportProcessing NoExportProcessing,
-    mkOptions NoImportProcessing ReplaceExports
+  [ mkOptions PreserveInstanceImports NoExportProcessing [],
+    mkOptions MinimiseImports ReplaceExports [],
+    mkOptions MinimiseImports NoExportProcessing [],
+    mkOptions NoImportProcessing AddExplicitExports [],
+    mkOptions NoImportProcessing NoExportProcessing [],
+    mkOptions NoImportProcessing ReplaceExports []
   ]
   where
-    mkOptions :: ImportAction -> ExportAction -> Options
-    mkOptions ia ea = Options ia ea (Just $ mkExt ia ea)
+    mkOptions :: ImportAction -> ExportAction -> [String] -> Options
+    mkOptions ia ea lo= Options ia ea (Just $ mkExt ia ea) lo
 
 -- | Make an extention for an output file
 mkExt :: ImportAction -> ExportAction -> String

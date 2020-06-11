@@ -1,6 +1,5 @@
 -- |
 -- Description: handling of command line options
-
 module Smuggler2.Options
   ( Options (..),
     parseCommandLineOptions,
@@ -10,7 +9,8 @@ module Smuggler2.Options
 where
 
 import Data.Char (toLower)
-import Data.List (foldl')
+import Data.List (foldl', isPrefixOf)
+import Data.List.Split (splitOn)
 import Plugins (CommandLineOption)
 
 -- | Ways of performing import processing
@@ -25,14 +25,15 @@ data ExportAction = NoExportProcessing | AddExplicitExports | ReplaceExports
 data Options = Options
   { importAction :: ImportAction,
     exportAction :: ExportAction,
-    newExtension :: Maybe String
+    newExtension :: Maybe String,
+    leaveOpenImports :: [String]
   }
   deriving (Show)
 
 -- | The default is to retain instance-only imports (eg, Data.List () )
 -- and add explict exports only if they are not already present
 defaultOptions :: Options
-defaultOptions = Options PreserveInstanceImports AddExplicitExports Nothing
+defaultOptions = Options PreserveInstanceImports AddExplicitExports Nothing []
 
 -- | Simple command line option parser.  Last occurrence wins.
 parseCommandLineOptions :: [CommandLineOption] -> Options
@@ -46,4 +47,11 @@ parseCommandLineOptions = foldl' parseCommandLineOption defaultOptions
       "noexportprocessing" -> opts {exportAction = NoExportProcessing}
       "addexplicitexports" -> opts {exportAction = AddExplicitExports}
       "replaceexports" -> opts {exportAction = ReplaceExports}
-      _ -> opts {newExtension = Just clo}
+      o ->
+        if "leaveopenimports" `isPrefixOf` o
+          then
+            opts
+              { leaveOpenImports =
+                   splitOn "," (drop (length "leaveopenimports:") clo)
+              }
+          else opts {newExtension = Just clo}
