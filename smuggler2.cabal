@@ -137,6 +137,7 @@ test-suite smuggler2-test
     , containers
     , directory
     , filepath
+    , ghc
     , ghc-paths
     , smuggler2
     , tasty

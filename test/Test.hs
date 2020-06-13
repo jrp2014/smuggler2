@@ -3,10 +3,11 @@
 module Main where
 
 import Control.Monad (forM)
-import Data.List (sort)
+import Data.List (intercalate, sort)
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set (fromList, member)
 import GHC.Paths (ghc)
+import GHC (mkModuleName, moduleNameString)
 import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Directory (doesDirectoryExist, getDirectoryContents)
 import System.Environment (lookupEnv)
@@ -28,20 +29,29 @@ testDir = "test" </> "tests"
 -- | Combinations of import and export action options to be tested
 optionsList :: [Options]
 optionsList =
-  [ mkOptions PreserveInstanceImports NoExportProcessing [],
-    mkOptions MinimiseImports ReplaceExports [],
-    mkOptions MinimiseImports NoExportProcessing [],
-    mkOptions NoImportProcessing AddExplicitExports [],
-    mkOptions NoImportProcessing NoExportProcessing [],
-    mkOptions NoImportProcessing ReplaceExports []
+  [ mkOptions PreserveInstanceImports NoExportProcessing [] ["Prelude"],
+    mkOptions MinimiseImports ReplaceExports [] [],
+    mkOptions MinimiseImports NoExportProcessing ["Prelude", "Data.Version"] [],
+    mkOptions NoImportProcessing AddExplicitExports [] [],
+    mkOptions NoImportProcessing NoExportProcessing [] [],
+    mkOptions NoImportProcessing ReplaceExports [] []
   ]
   where
-    mkOptions :: ImportAction -> ExportAction -> [String] -> Options
-    mkOptions ia ea lo= Options ia ea (Just $ mkExt ia ea) lo
+    mkOptions :: ImportAction -> ExportAction -> [String] -> [String] -> Options
+    mkOptions ia ea lo mo =
+      Options
+        ia
+        ea
+        (Just $ mkExt ia ea lo mo)
+        (mkModuleName <$> lo)
+        (mkModuleName <$> mo)
 
 -- | Make an extention for an output file
-mkExt :: ImportAction -> ExportAction -> String
-mkExt ia ea = show ia ++ show ea -- ++ "-" ++ takeFileName ghc
+mkExt :: ImportAction -> ExportAction -> [String] -> [String] -> String
+mkExt ia ea lo mo =
+  show ia
+    ++ show ea
+    ++ filter (/= '.') ( concat lo ++ concat mo ) -- ++ "-" ++ takeFileName ghc
 
 -- | Generate test for a list of 'Options' each of which specify what action to
 -- take on imports and exports
@@ -65,7 +75,7 @@ goldenTests opts = do
           (testFile -<.> testName ++ "-golden") -- golden file
           outputFilename
           ( do
-              -- Write a default output file for those tests where smuggler
+              -- Write a default output file for those tests where smuggler2
               -- (deliberately) does not generate a new one
               writeBinaryFile outputFilename "Source file was not touched\r\n"
               compile testFile opts
@@ -121,14 +131,15 @@ compile testcase opts = do
         setWorkingDirInherit . setEnvInherit $
           proc
             (head cabalCmd)
-            (tail cabalCmd ++ cabalArgs) :: ProcessConfig () () ()
+            (tail cabalCmd ++ cabalArgs) ::
+          ProcessConfig () () ()
   runProcess_ cabalConfig
   where
     cabalArgs :: [String]
     cabalArgs =
       -- - not sure why it is necessary to mention the smuggler2 package explicitly,
       --   but it appears to be hidden otherwise.
-      -- - This also puts the .imports files that smuggler generates somewhere they
+      -- - This also puts the .imports files that smuggler2 generates somewhere they
       --   can easily be found
       [ "--with-compiler=" ++ ghc,
         "exec",
@@ -145,7 +156,14 @@ compile testcase opts = do
           ("-fplugin-opt=Smuggler2.Plugin:" ++)
           ( let ia = importAction opts
                 ea = exportAction opts
-                -- the extension should have been set by 'optionsList'
-             in (fromMaybe "missng" (newExtension opts) : [show ia, show ea])
+                ne = newExtension opts
+                lo = intercalate "," (moduleNameString <$> leaveOpenImports opts)
+                mo = intercalate "," (moduleNameString <$> makeOpenImports opts)
+             in -- The extension should have been set by 'optionsList'
+                -- The rest of the list are the other arguments for the test
+                ( fromMaybe "missng" ne : [show ia, show ea]
+                    ++  ["LeaveOpenImports:" ++ lo | not (null lo)]
+                    ++  ["MakeOpenImports:" ++ mo | not (null mo)]
+                )
           )
         ++ [testcase]

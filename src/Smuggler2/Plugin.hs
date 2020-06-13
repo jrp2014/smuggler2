@@ -8,19 +8,17 @@ module Smuggler2.Plugin
 where
 
 import Avail (AvailInfo, Avails)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Bool (bool)
-import Data.Maybe (fromMaybe, isNothing)
+import Data.List (intersect)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Version (showVersion)
-import DynFlags
-  ( DynFlags (dumpDir),
-    HasDynFlags (getDynFlags),
-    xopt,
-  )
-import ErrUtils (compilationProgressMsg, fatalErrorMsg)
+import DynFlags (DynFlags (dumpDir), HasDynFlags (getDynFlags), xopt)
+import ErrUtils (compilationProgressMsg, fatalErrorMsg, warningMsg)
 import GHC
   ( GenLocated (L),
     GhcPs,
+    GhcRn,
     HsModule (hsmodExports, hsmodImports),
     ImportDecl (ideclHiding, ideclImplicit, ideclName),
     LIE,
@@ -47,13 +45,8 @@ import Language.Haskell.GHC.ExactPrint
     setEntryDPT,
   )
 import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (DP))
+import Outputable (Outputable (ppr), neverQualify, printForUser, text, vcat)
 import Outputable
-  ( Outputable (ppr),
-    neverQualify,
-    printForUser,
-    text,
-    vcat,
-  )
 import Paths_smuggler2 (version)
 import Plugins
   ( CommandLineOption,
@@ -66,32 +59,20 @@ import Smuggler2.Anns (mkLoc, mkParenT)
 import Smuggler2.Exports (mkExportAnnT)
 import Smuggler2.Imports (getMinimalImports)
 import Smuggler2.Options
-  ( ExportAction
-      ( AddExplicitExports,
-        NoExportProcessing,
-        ReplaceExports
-      ),
+  ( ExportAction (AddExplicitExports, NoExportProcessing, ReplaceExports),
     ImportAction (MinimiseImports, NoImportProcessing),
-    Options (exportAction, importAction, leaveOpenImports, newExtension),
+    Options (..),
     parseCommandLineOptions,
   )
 import Smuggler2.Parser (runParser)
 import StringBuffer (StringBuffer (StringBuffer), lexemeToString)
 import System.Directory (removeFile)
-import System.FilePath ((-<.>), (</>), isExtensionOf, takeExtension)
+import System.FilePath (isExtensionOf, takeExtension, (-<.>), (</>))
 import System.IO (IOMode (WriteMode), withFile)
 import TcRnExports (exports_from_avail)
 import TcRnTypes
   ( RnM,
-    TcGblEnv
-      ( tcg_exports,
-        tcg_imports,
-        tcg_mod,
-        tcg_rdr_env,
-        tcg_rn_exports,
-        tcg_rn_imports,
-        tcg_used_gres
-      ),
+    TcGblEnv (tcg_exports, tcg_imports, tcg_mod, tcg_rdr_env, tcg_rn_exports, tcg_rn_imports, tcg_used_gres),
     TcM,
   )
 
@@ -106,19 +87,27 @@ plugin =
 -- | The plugin itself
 smugglerPlugin :: [CommandLineOption] -> ModSummary -> TcGblEnv -> TcM TcGblEnv
 smugglerPlugin clopts modSummary tcEnv
-  -- short circuit, if nothing to do
+  -- short circuit silently, if nothing to do
   | (importAction options == NoImportProcessing)
       && (exportAction options == NoExportProcessing) =
     return tcEnv
   | otherwise = do
-    -- Get the imports and their usage
-    let imports = tcg_rn_imports tcEnv
+    dflags <- getDynFlags
+    liftIO $ compilationProgressMsg dflags ("smuggler2 " ++ showVersion version)
+
+    -- Get imports  usage
     uses <- readMutVar $ tcg_used_gres tcEnv
     let usage = findImportUsage imports uses
 
     -- This ensures that the source file is not touched if there are no unused
-    -- imports, or exports already exist and we are not replacing them
-    let noUnusedImports = all (\(_decl, used, unused) -> not (null used) && null unused) usage
+    -- imports, or exports already exist and we are not replacing them.  Assumes
+    -- that an open import (ideclHiding Nothing) has unused imports.
+    let noUnusedImports =
+          all
+            ( \(L _ decl, used, unused) ->
+                null unused && not (null used) && isJust (ideclHiding decl)
+            )
+            usage
 
     let hasExplicitExports = case tcg_rn_exports tcEnv of
           Nothing -> False -- There is not even a module header
@@ -133,25 +122,41 @@ smugglerPlugin clopts modSummary tcEnv
       && ( exportAction options == NoExportProcessing
              || (hasExplicitExports && exportAction options /= ReplaceExports)
          )
-      then return tcEnv
+      then do
+        liftIO $
+          compilationProgressMsg
+            dflags
+            ( "smuggler2: nothing to do for module "
+                ++ (moduleNameString . moduleName $ ms_mod modSummary)
+            )
+        return tcEnv
       else do
-        dflags <- getDynFlags
-        liftIO $ compilationProgressMsg dflags ("smuggler2 " ++ showVersion version)
+        when (importAction options == NoImportProcessing && not (null $ leaveOpenImports options))
+          . liftIO
+          $ warningMsg dflags (text "LeaveOpenModules ignored as NoImportProcessing also specified")
+        when (importAction options == NoImportProcessing && not (null $ makeOpenImports options))
+          . liftIO
+          $ warningMsg dflags (text "MakeOpenModules ignored as NoImportProcessing also specified")
 
         -- Dump GHC's view of what the minimal imports are for the current
-        -- module, so that they can be annotated when parsed back in
+        -- module, so that they can be annotated when parsed back in.
         -- This is needed because there too much information loss between
         -- the parsed and renamed AST to use the latter for reconstituting the
-        -- source.  An alternative would be to  "index" each name location with
+        -- source.  @ghc-exactprint@ "index"es ('Anns') each name location with
         -- a SrcSpan to allow the name matchup, and to make the 'ParsedSource' a
         -- 100% representation of the original source (modulo tabs, trailing
         -- whitespace per line).
         let minImpFilePath = mkMinimalImportsPath dflags (ms_mod modSummary)
         printMinimalImports' dflags minImpFilePath usage
 
-        -- Run smuggling only for its side effects
+        -- Run smuggling only for its side effects; don't change the tcEnv we
+        -- were givem.
         tcEnv <$ smuggling dflags minImpFilePath
   where
+    -- The original imports
+    imports :: [LImportDecl GhcRn]
+    imports = tcg_rn_imports tcEnv
+
     -- Does all the work
     smuggling :: DynFlags -> FilePath -> RnM ()
     smuggling dflags minImpFilePath = do
@@ -182,7 +187,8 @@ smugglerPlugin clopts modSummary tcEnv
               liftIO $
                 fatalErrorMsg dflags (text $ "smuggler: failed to parse minimal imports from " ++ minImpFilePath)
             Right (annsImpMod, L _ impMod) -> do
-              -- The actual minimal imports themselves, as generated by GHC
+              -- The actual minimal imports themselves, as generated by GHC,
+              -- with open imports processed as specified
               let minImports = hsmodImports impMod
 
               -- What is exported by the module
@@ -220,9 +226,9 @@ smugglerPlugin clopts modSummary tcEnv
             exportable :: RnM [AvailInfo]
             exportable = do
               let rdr_env = tcg_rdr_env tcEnv
-              let imports = tcg_imports tcEnv --  actually not needed for the Nothing case
+              let importAvails = tcg_imports tcEnv --  actually not needed for the Nothing case
               let this_mod = tcg_mod tcEnv
-              exports <- exports_from_avail Nothing rdr_env imports this_mod
+              exports <- exports_from_avail Nothing rdr_env importAvails this_mod
               return (snd exports)
 
             --  Replace a target module's imports
@@ -276,6 +282,7 @@ smugglerPlugin clopts modSummary tcEnv
                   | otherwise = do
                     -- Generate the exports list
                     exportsList <- mapM mkExportAnnT exports
+
                     -- add commas in between and parens around
                     mapM_ addTrailingCommaT (init exportsList)
                     lExportsList <- mkLoc exportsList >>= mkParenT unLoc
@@ -286,7 +293,9 @@ smugglerPlugin clopts modSummary tcEnv
 
     -- This version of the GHC function ignores implicit imports, as they
     -- cannot be parsed back in.  (There is an extraneous (implicit))
-    -- It also provides for leaving out instance-only imports (eg, Data.List() )
+    -- It also provides for leaving out instance-only imports (eg,
+    -- @import Data.List ()@) and handles the preservation of open imports
+    -- (eg, @import Prelude@)
     printMinimalImports' :: DynFlags -> FilePath -> [ImportDeclUsage] -> RnM ()
     printMinimalImports' dflags filename imports_w_usage =
       do
@@ -307,7 +316,7 @@ smugglerPlugin clopts modSummary tcEnv
                   neverQualify
                   ( vcat
                       ( map
-                          (ppr . leaveOpen (leaveOpenImports options))
+                          (ppr . leaveOpen)
                           (filter letThrough imports')
                       )
                   )
@@ -315,20 +324,33 @@ smugglerPlugin clopts modSummary tcEnv
       where
         notImplicit :: ImportDecl pass -> Bool
         notImplicit = not . ideclImplicit
+        --
         notInstancesOnly :: ImportDecl pass -> Bool
         notInstancesOnly i = case ideclHiding i of
           Just (False, L _ []) -> False
           _ -> True
+        --
         keepInstanceOnlyImports :: Bool
         keepInstanceOnlyImports = importAction options /= MinimiseImports
+        -- Ignore explicit instance only imports, unless the 'MinimiseImports'
+        -- option is specified
         letThrough :: LImportDecl pass -> Bool
         letThrough (L _ i) = notImplicit i && (keepInstanceOnlyImports || notInstancesOnly i)
-        leaveOpen :: [String] -> LImportDecl pass -> LImportDecl pass
-        leaveOpen modules (L l decl) = L l $ case ideclHiding decl of
-          Just (False, L l' _)
-            | (moduleNameString . unLoc $ ideclName decl) `elem` modules ->
-              decl {ideclHiding = Nothing}
+        --
+        leaveOpen :: LImportDecl pass -> LImportDecl pass
+        leaveOpen (L l decl) = L l $ case ideclHiding decl of
+          Just (False, L _ _) -- ie, not hiding
+            | thisModule `elem` kModules || thisModule `elem` mModules -> decl {ideclHiding = Nothing}
           _ -> decl
+          where
+            thisModule = unLoc (ideclName decl)
+            mModules = makeOpenImports options
+            lModules = leaveOpenImports options
+            oModules = unLoc . ideclName <$> filter isOpen (unLoc <$> imports) -- original open imports
+              where
+                isOpen = isNothing . ideclHiding
+            kModules = lModules `intersect` oModules -- original open imports to leave open
+
     -- Construct the path into which GHC's version of minimal imports is dumped
     mkMinimalImportsPath :: DynFlags -> Module -> FilePath
     mkMinimalImportsPath dflags this_mod
@@ -339,7 +361,10 @@ smugglerPlugin clopts modSummary tcEnv
           "smuggler2-" ++ moduleNameString (moduleName this_mod) ++ "."
             ++ fromMaybe "smuggler2" (newExtension options)
             ++ ".imports"
+
     options :: Options
     options = parseCommandLineOptions clopts
+
+    --
     strBufToStr :: StringBuffer -> String
     strBufToStr sb@(StringBuffer _ len _) = lexemeToString sb len

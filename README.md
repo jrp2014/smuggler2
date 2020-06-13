@@ -17,15 +17,21 @@ Smuggler2 is a Haskell GHC Source Plugin that automatically
   name is used elsewhere in your package. Limiting exports may make it easier
   for `ghc` to optimise some code.
 
-While writing code, it may be convenient to import a complete module (by not
-specifiying what is to be imported from it) and then get Smuggler2 to limit the
-import to include only the names that are used.
+The [Haskell Wiki](https://wiki.haskell.org/Import_modules_properly) sets out
+the pros and cons of using explicit import lists. `Smuggler2` offers the option
+of leaving a module imports open (by not specifiying explcitly what is to be
+imported from them) while developing and then getting `Smuggler2` to add minimal
+lists of explicit exports. This helps to document modules and, arguably, makes
+them easier to read by avoiding the need to qualify names to give an indication
+of where they came from. It could also provides a cross-check that only expected
+names are being used.
 
 ## How to use
 
 Install `smuggler2` using `cabal install --lib smuggler2`.
 
-If you also want the `ghc` wrapper, install it using `cabal install exe:smuggler2`.
+If you also want the `ghc` wrapper, install it using
+`cabal install exe:smuggler2`.
 
 ### Adding Smuggler2 to your dependencies
 
@@ -63,8 +69,8 @@ means that you can also exclude `smuggler2` dependencies from your final builds.
 ### Alternatively, using a local version
 
 If you have installed `smuggler2` from a local copy of this repository, you may
-need to add `-package smuggler2` to your `ghc-options` if you did not
-install using the `--lib` flag to `cabal install`.
+need to add `-package smuggler2` to your `ghc-options` if you did not install
+using the `--lib` flag to `cabal install`.
 
 ### Or use a `ghc` wrapper
 
@@ -107,9 +113,25 @@ $ cabal build -w ghc-smuggler2
   all available exports (which, again, you can, of course, then prune to your
   requirements).
 
-Any other option value is used to generate a source file with a new extension of
-the option value (`new` in the following example) rather than replacing the
-original file.
+- `LeaveOpenImports` and `MakeOpenImports` take a comma-separated list of module
+  names. The specified modules are to be left open if they were open in the
+  sourcee (in the case of `LeaveOpenImports`) and made open even if they were
+  not originall (in the case of `MakeOpenImports`). For example, you could add
+
+```bash
+  -fplugin-opt=Smuggler2.Plugin:LeaveOpenImports:Relude,RIO,Prelude,Some.Module
+```
+
+This may be helpful if you use ghc's 'NoImplicitPreluda' language feature and
+import a prelude manually. If the `PreserveInstanceImports` optin was
+sepecified, The `LeaveOpenImports` and `MakeOpenImports` options override it for
+the specified modules, They have no effect, if `NoImportProcessing` was
+specified. Id a module is specified both to be left open and made open, it will
+be made open.
+
+- Any other option value is used to generate a source file with a new extension
+  of the option value (`new` in the following example) rather than replacing the
+  original file.
 
 ```Cabal
     ghc-options: -fplugin=Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
@@ -118,8 +140,8 @@ original file.
 This will create output files with a `.new` suffix rather the overwriting the
 originals.
 
-Smuggler2 tries not to change files when there is no work to do.
-So you can just run `ghcid` as usual:
+Smuggler2 tries not to change files when there is no work to do. So you can just
+run `ghcid` as usual:
 
 ```bash
 $ ghcid --command='cabal repl'
@@ -130,8 +152,8 @@ $ ghcid --command='cabal repl'
 Because `cabal` and `ghc` don't have full support for distinguishing dependent
 packages from plug-ins you will probably want to ensure that the build
 dependencies for your project are installed into your local package db first,
-before enabling sumuggler, otherwise they will all be processed by it too,
-as your project builds, which should do no harm, but will increase your build time.
+before enabling sumuggler, otherwise they will all be processed by it too, as
+your project builds, which should do no harm, but will increase your build time.
 
 `Smuggler2` is robust -- it can chew through the
 [Agda](https://github.com/agda/agda) codebase of over 370 modules with complex
@@ -149,13 +171,13 @@ But there are some caveats, most of which are either easy enough to work around
 
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
   them. (This is a more aggressive approach than `smuggler` which focuses on
-  removing redundant imports.) It has advantages and disadvantages.
-  The advantage is that a minimal set of imports is generated in a reproducable
+  removing redundant imports.) It has advantages and disadvantages. The
+  advantage is that a minimal set of imports is generated in a reproducable
   format. So you can just import a library without specifying any specific
-  imports and `Smuggler2` will add an explict list of things that are
-  used from it. This can be a useful check and better document your modules.
-  The disdvantage is that imports may be reordered, comments and
-  blank lines dropped, external imports mixed with external, etc.
+  imports and `Smuggler2` will add an explict list of things that are used from
+  it. This can be a useful check and better document your modules. The
+  disdvantage is that imports may be reordered, comments and blank lines
+  dropped, external imports mixed with external, etc.
 
 - By default `Smuggler2` does not remove imports completely because an import
   may be being used to only import instances of typeclasses, So it will leave

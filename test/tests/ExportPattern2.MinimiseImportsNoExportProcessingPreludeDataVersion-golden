@@ -2,26 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Imported.ExportPattern (
-  T(..),
-  Nat(..),
-  Showable(..),
-  Type(..),
-  pattern ExNumPat,
-  pattern Head,
-  pattern Single,
-  pattern Ess,
-  pattern Pair,
-  pattern One,
-  pattern Sh,
-  pattern Succ,
-  pattern (:>),
-  pattern (:<),
-  pattern Empty,
-  pattern Maybe,
-  pattern Int,
-  pattern Arrow,
-  pattern P ) where
+module ExportPattern2 where
 
 import Control.Monad ( guard )
 import qualified Data.Sequence as Seq
