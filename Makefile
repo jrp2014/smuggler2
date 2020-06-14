@@ -1,7 +1,7 @@
 # For convenience
 #
 
-.PHONY: build install test clean accept doc hlint ghcid upload weed
+.PHONY: build install test clean accept doc hlint ghcid upload upload-docs weed
 
 all: build test doc
 
@@ -33,8 +33,10 @@ upload:
 	cabal check
 	cabal gen-bounds
 	cabal sdist
-	cabal haddock --haddock-for-hackage --enable-doc --haddock-option=--hyperlinked-source
 	cabal upload dist-newstyle/sdist/smuggler2-0.3.*.*.tar.gz
+
+upload-docs:
+	cabal haddock --haddock-for-hackage --enable-doc --haddock-option=--hyperlinked-source
 	cabal upload -d --publish dist-newstyle/smuggler2-0.3.*.*-docs.tar.gz
 
 hlint:

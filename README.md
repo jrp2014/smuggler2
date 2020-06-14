@@ -126,9 +126,9 @@ $ ghcid --command='cabal repl'
   sourcee (in the case of `LeaveOpenImports`) and made open even if they were
   not originall (in the case of `MakeOpenImports`). For example, you could add
 
-        ```bash
-          -fplugin-opt=Smuggler2.Plugin:LeaveOpenImports:Relude,RIO,Prelude,Some.Module
-        ```
+  ```bash
+  -fplugin-opt=Smuggler2.Plugin:LeaveOpenImports:Relude,RIO,Prelude,Some.Module
+  ```
 
   This may be helpful if you use ghc's `NoImplicitPrelude` language feature and
   import a prelude manually.
@@ -142,9 +142,9 @@ $ ghcid --command='cabal repl'
   of the option value (`new` in the following example) rather than replacing the
   original file.
 
-        ```Cabal
-            ghc-options: -fplugin=Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
-        ```
+  ```Cabal
+  ghc-options: -fplugin=Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
+  ```
 
   This will create output files with a `.new` suffix rather the overwriting the
   originals.
