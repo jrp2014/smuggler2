@@ -89,6 +89,14 @@ or just
 $ cabal build -w ghc-smuggler2
 ```
 
+Smuggler2 tries not to change files when there is no work to do.
+
+You can just run `ghcid` as usual:
+
+```bash
+$ ghcid --command='cabal repl'
+```
+
 ## Options
 
 `Smuggler2` has several (case-insensitive) options, which can be set by adding
@@ -118,42 +126,37 @@ $ cabal build -w ghc-smuggler2
   sourcee (in the case of `LeaveOpenImports`) and made open even if they were
   not originall (in the case of `MakeOpenImports`). For example, you could add
 
-```bash
-  -fplugin-opt=Smuggler2.Plugin:LeaveOpenImports:Relude,RIO,Prelude,Some.Module
-```
+        ```bash
+          -fplugin-opt=Smuggler2.Plugin:LeaveOpenImports:Relude,RIO,Prelude,Some.Module
+        ```
 
-This may be helpful if you use ghc's 'NoImplicitPreluda' language feature and
-import a prelude manually. If the `PreserveInstanceImports` optin was
-sepecified, The `LeaveOpenImports` and `MakeOpenImports` options override it for
-the specified modules, They have no effect, if `NoImportProcessing` was
-specified. Id a module is specified both to be left open and made open, it will
-be made open.
+  This may be helpful if you use ghc's `NoImplicitPrelude` language feature and
+  import a prelude manually.
+
+  If the `PreserveInstanceImports` option was sepecified, the `LeaveOpenImports`
+  and `MakeOpenImports` options override it for the specified modules, They have
+  no effect, if `NoImportProcessing` was specified. If a module is specified
+  both to be left open and made open, it will be made open.
 
 - Any other option value is used to generate a source file with a new extension
   of the option value (`new` in the following example) rather than replacing the
   original file.
 
-```Cabal
-    ghc-options: -fplugin=Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
-```
+        ```Cabal
+            ghc-options: -fplugin=Smuggler2.Plugin -fplugin-opt=Smuggler2.Plugin:new
+        ```
 
-This will create output files with a `.new` suffix rather the overwriting the
-originals.
-
-Smuggler2 tries not to change files when there is no work to do. So you can just
-run `ghcid` as usual:
-
-```bash
-$ ghcid --command='cabal repl'
-```
+  This will create output files with a `.new` suffix rather the overwriting the
+  originals.
 
 ## Caveats
 
 Because `cabal` and `ghc` don't have full support for distinguishing dependent
-packages from plug-ins you will probably want to ensure that the build
-dependencies for your project are installed into your local package db first,
-before enabling sumuggler, otherwise they will all be processed by it too, as
-your project builds, which should do no harm, but will increase your build time.
+packages from plug-ins you will probably want to ensure that the build the
+dependencies for your project tha are installed into your local package db
+first, before enabling sumuggler, otherwise they will all be processed by it
+too, as your project builds, which should do no harm, but will increase your
+build time.
 
 `Smuggler2` is robust -- it can chew through the
 [Agda](https://github.com/agda/agda) codebase of over 370 modules with complex
@@ -211,7 +214,7 @@ But there are some caveats, most of which are either easy enough to work around
 - Multiple separate import lines referring to the same library are not
   consolidated
 
-- Literate Haskell `.lhs` files will procssed into ordinary haskell files a
+- Literate Haskell `.lhs` files will procssed into ordinary haskell files wth a
   `-lhs` suffix.
 
 * `hiding` clauses may not be properly analysed. So hiding things that are not
