@@ -242,6 +242,9 @@ Requirements:
 
 ### How to build
 
+There is a `Makefile` at the root of the distribution that covers various
+maintenance tasks, including building the package.
+
 ```shell
 $ cabal update
 $ cabal build

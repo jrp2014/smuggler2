@@ -37,6 +37,7 @@ extra-source-files:
   Makefile
   Setup.hs
   weeder.dhall
+  .hlint.yaml
 
 -- wildcards are allowed only in the basename
 --test/tests/*.*-golden

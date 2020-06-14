@@ -7,8 +7,13 @@ all: build test doc
 
 build:
 	# Creates a package environment file needed to get the tests to run in some
-	# environments (eg, travis)
+	# environments (eg, travis).  Use with care as it can lead to unexpected
+	# results if you are not aware that ghc is using it; it is a normally hidden
+	# dot file.
 	cabal build # --write-ghc-environment-files=always
+
+debug:
+	cabal build -fdebug
 
 install:
 	cabal install --lib smuggler2
