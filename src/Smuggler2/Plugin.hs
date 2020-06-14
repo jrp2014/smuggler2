@@ -46,7 +46,6 @@ import Language.Haskell.GHC.ExactPrint
   )
 import Language.Haskell.GHC.ExactPrint.Types (DeltaPos (DP))
 import Outputable (Outputable (ppr), neverQualify, printForUser, text, vcat)
-import Outputable
 import Paths_smuggler2 (version)
 import Plugins
   ( CommandLineOption,
@@ -216,7 +215,13 @@ smugglerPlugin clopts modSummary tcEnv
 
               -- Print the result
               let newContent = exactPrint astHsMod' annsHsMod'
-              liftIO $ writeFile (modulePath -<.> ext) newContent
+              let newModulePath = modulePath -<.> ext
+              liftIO $ writeFile newModulePath newContent
+
+              liftIO $
+                compilationProgressMsg
+                  dflags
+                  ( "smuggler2: output written to " ++ newModulePath )
 
               -- Clean up: delete the GHC-generated imports file
               liftIO $ removeFile minImpFilePath

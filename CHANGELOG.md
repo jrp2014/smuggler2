@@ -5,8 +5,8 @@ Notable changes to `Smuggler2`
 `smuggler2` uses [PVP Versioning][1].
 The change log is available [on GitHub][2].
 
-## Unreleased
-- fix bug left some files with open imports unprocessed
+##  [0.3.5.1]: --  14 June 2020
+- fix bug that left some files with open imports unprocessed
 - add `LeaveOpenImports` and `MakeOpenImports` options
 
 ##  [0.3.4.2]: --  10 June 2020

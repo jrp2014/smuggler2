@@ -28,12 +28,12 @@ extra-doc-files:
 
 extra-source-files:
   test/tests/**/*.hs
-  test/tests/**/*.MinimiseImportsNoExportProcessing-golden
+  test/tests/**/*.MinimiseImportsNoExportProcessingPreludeDataVersion-golden
   test/tests/**/*.MinimiseImportsReplaceExports-golden
   test/tests/**/*.NoImportProcessingAddExplicitExports-golden
   test/tests/**/*.NoImportProcessingNoExportProcessing-golden
   test/tests/**/*.NoImportProcessingReplaceExports-golden
-  test/tests/**/*.PreserveInstanceImportsNoExportProcessing-golden
+  test/tests/**/*.PreserveInstanceImportsNoExportProcessingPrelude-golden
   Makefile
   Setup.hs
   weeder.dhall
