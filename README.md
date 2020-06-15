@@ -220,7 +220,7 @@ But there are some caveats, most of which are either easy enough to work around
 * `hiding` clauses may not be properly analysed. So hiding things that are not
   used may not be spotted.
 
-* The test suite does not seem to run reliably on Windows. This is probably more
+* The plugin does not seem to run reliably on Windows. This is probably more
   of an issue with the way that the tests are run, than `Smuggler2` itself.
 
 * Currently `cabal` does not have a particular way of specifying plugins. (See,
@@ -239,6 +239,8 @@ Requirements:
   versions of GHC don't. The results compile on `ghc-8.6.5` and later anyway,
   but the imports are not as minimal for later versions as they could be.
 - `cabal >= 3.0` (ideally `3.2`)
+- The Windows version of the plugin is broken due to a compiler bug.  I will try
+  to provide a work-around.
 
 ### How to build
 
@@ -290,8 +292,6 @@ that old build artefacts do not lead to misleading results.
 command that is to be used to do that can be set using the `CABAL` environment
 variable. This may be helpful for certain workflows where `cabal` is not in the
 current path, or you want to add extra flags to the `cabal` command.
-
-The test suite does not seem to run reliably on Windows
 
 Importing a test module from another test module in the same directory is likely
 to lead to race conditions as 'Tasty' runs tests in parallel and so will try to

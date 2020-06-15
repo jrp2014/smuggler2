@@ -13,7 +13,7 @@ import Data.Bool (bool)
 import Data.List (intersect)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Version (showVersion)
-import DynFlags (DynFlags (dumpDir), HasDynFlags (getDynFlags), xopt)
+import DynFlags (DynFlags (dumpDir), HasDynFlags (getDynFlags), setUnsafeGlobalDynFlags, xopt)
 import ErrUtils (compilationProgressMsg, fatalErrorMsg, warningMsg)
 import GHC
   ( GenLocated (L),
@@ -92,6 +92,7 @@ smugglerPlugin clopts modSummary tcEnv
     return tcEnv
   | otherwise = do
     dflags <- getDynFlags
+    liftIO $ setUnsafeGlobalDynFlags dflags -- this seems to be needed for Windows only
     liftIO $ compilationProgressMsg dflags ("smuggler2 " ++ showVersion version)
 
     -- Get imports  usage
