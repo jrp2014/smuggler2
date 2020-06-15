@@ -6,12 +6,12 @@ import Control.Monad (forM)
 import Data.List (intercalate, sort)
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set (fromList, member)
-import GHC.Paths (ghc)
 import GHC (mkModuleName, moduleNameString)
+import GHC.Paths (ghc)
 import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Directory (doesDirectoryExist, getDirectoryContents)
 import System.Environment (lookupEnv)
-import System.FilePath ((-<.>), (</>), takeBaseName, takeExtension)
+import System.FilePath (takeBaseName, takeExtension, (-<.>), (</>))
 import System.Process.Typed
   ( ProcessConfig,
     proc,
@@ -51,7 +51,7 @@ mkExt :: ImportAction -> ExportAction -> [String] -> [String] -> String
 mkExt ia ea lo mo =
   show ia
     ++ show ea
-    ++ filter (/= '.') ( concat lo ++ concat mo ) -- ++ "-" ++ takeFileName ghc
+    ++ filter (/= '.') (concat lo ++ concat mo) -- ++ "-" ++ takeFileName ghc
 
 -- | Generate test for a list of 'Options' each of which specify what action to
 -- take on imports and exports
@@ -69,9 +69,11 @@ goldenTests opts = do
       testName
       [ goldenVsFileDiff
           (takeBaseName testFile) -- test name
-          -- The -G. is needed because cabal sdist changes the golden file
-          -- permissions and so all the tests fail.
-          (\ref new -> ["git", "diff", "--no-index", "-G.", ref, new]) -- how to display diffs
+          ( \ref new -> -- how to display diffs
+              -- The -G. is needed because cabal sdist changes the golden file
+              -- permissions and so all the tests fail.
+              ["git", "diff", "-G.", "--ignore-cr-at-eol", "--no-index", ref, new]
+          )
           (testFile -<.> testName ++ "-golden") -- golden file
           outputFilename
           ( do
@@ -85,7 +87,6 @@ goldenTests opts = do
       ]
   where
     testName = fromMaybe "NoNewExtension" (newExtension opts)
-
 -- | A version of 'Test.Tasty.Golden.findByExtension' that does not look into
 -- subdirectories.  This allows tests to be run on a module that imports other
 -- modules without risking the race condition where smuggler is being run

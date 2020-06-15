@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               smuggler2
-version:            0.3.5.1
+version:            0.3.5.2
 synopsis:
   GHC Source Plugin that helps to minimise imports and generate explicit exports
 

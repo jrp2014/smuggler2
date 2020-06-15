@@ -239,8 +239,8 @@ Requirements:
   versions of GHC don't. The results compile on `ghc-8.6.5` and later anyway,
   but the imports are not as minimal for later versions as they could be.
 - `cabal >= 3.0` (ideally `3.2`)
-- The Windows version of the plugin is broken due to a compiler bug.  I will try
-  to provide a work-around.
+- The Windows version of the plugin is a bit flaky because of apparent compiler
+  bugs.
 
 ### How to build
 
