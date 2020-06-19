@@ -5,8 +5,9 @@ Notable changes to `Smuggler2`
 `smuggler2` uses [PVP Versioning][1].
 The change log is available [on GitHub][2].
 
-## Unreleased
+##  [0.3.6.1]: --  19 June 2020
 - improve handling of pattern synonyms
+- remove ghc-smuggler2 from build. Provide a scipt instead, to appease cabal
 
 ##  [0.3.5.2]: --  15 June 2020
 - tweaks to allow `smuggler2` to run under Windows
