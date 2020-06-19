@@ -30,9 +30,6 @@ names are being used.
 
 Install `smuggler2` using `cabal install --lib smuggler2`.
 
-If you also want the `ghc` wrapper, install it using
-`cabal install exe:smuggler2`.
-
 ### Adding Smuggler2 to your dependencies
 
 Add `smuggler2` to the dependencies of your project and to your compiler flags.
@@ -70,15 +67,15 @@ means that you can also exclude `smuggler2` dependencies from your final builds.
 
 If you have installed `smuggler2` from a local copy of this repository, you may
 need to add `-package-env default -package smuggler2` to your `ghc-options` if
-you did not install using the `--lib` flag to `cabal install`.  (This will
-depend on your setup and your version of `cabal`.
+you did not install using the `--lib` flag to `cabal install`. (This will depend
+on your setup and your version of `cabal`.
 
 ### Or use a `ghc` wrapper
 
-The `smuggler2` package provides an executable `ghc-smuggler2` that calls `ghc`
-with the `-fplugin=Smuggler2.Plugin` argument (followed by any others that you
-supply). This allows you to run the plugin over your sources without modifying
-your `.cabal` file:
+The repostory also has a very simple `ghc` wrapper `ghc-smuggler2` in the `app`
+folder that you can tweak to accomodate your local build environment. This
+allows you to run the plugin over your sources without modifying your `.cabal`
+file:
 
 ```bash
 $ cabal build -with-compiler=ghc-smuggler2
@@ -162,7 +159,7 @@ will increase your build time:
 ```bash
 $ cabal build
 $ cabal clean
-$ cabal -w ghc-wmuggler2
+$ cabal -w ghc-smuggler2
 ```
 
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
