@@ -19,7 +19,7 @@ import GHC
       LImportDecl )
 import HscTypes -- earlier versions of Ghc don't have ModIface_
 import LoadIface ( loadSrcInterface )
-import Name ( HasOccName(..), isDataOcc, isSymOcc, isTcOcc )
+import Name ( HasOccName(..), isDataOcc, isTcOcc )
 import Outputable ( Outputable(ppr), text, (<+>) )
 #if MIN_VERSION_GLASGOW_HASKELL(8,8,0,0)
 import RdrName ( gresToAvailInfo )

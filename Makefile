@@ -12,7 +12,7 @@ build:
 	# dot file.
 	cabal outdated
 	cabal build all:libs
-	cabal build all:exes
+#	cabal build all:exes
 	cabal build all:tests
 
 	#cabal build # --write-ghc-environment-files=always
