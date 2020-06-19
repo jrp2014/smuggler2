@@ -69,8 +69,9 @@ means that you can also exclude `smuggler2` dependencies from your final builds.
 ### Alternatively, using a local version
 
 If you have installed `smuggler2` from a local copy of this repository, you may
-need to add `-package smuggler2` to your `ghc-options` if you did not install
-using the `--lib` flag to `cabal install`.
+need to add `-package-env default -package smuggler2` to your `ghc-options` if
+you did not install using the `--lib` flag to `cabal install`.  (This will
+depend on your setup and your version of `cabal`.
 
 ### Or use a `ghc` wrapper
 
@@ -153,24 +154,16 @@ $ ghcid --command='cabal repl'
 
 Because `cabal` and `ghc` don't have full support for distinguishing dependent
 packages from plug-ins you will probably want to ensure that the build the
-dependencies for your project tha are installed into your local package db
-first, before enabling sumuggler, otherwise they will all be processed by it
-too, as your project builds, which should do no harm, but will increase your
-build time.
+dependencies for your project that are installed into your local package db
+first, before enabling `Smuggler2`, or `ghc-smuggler2` otherwise they will all
+be processed by it too, as your project builds, which should do no harm, but
+will increase your build time:
 
-`Smuggler2` is robust -- it can chew through the
-[Agda](https://github.com/agda/agda) codebase of over 370 modules with complex
-interdependencies and be tripped over by only
-
-- a couple of ambiguous exports (are we trying to export something defined in
-  the current module or something with the same name from an imported module)
-- and a couple of imports where both qualifed and unqualifed version of the
-  module are imported and there are references to both qualified and unqualifed
-  version of the same names
-- some qualified record fields are overlooked
-
-But there are some caveats, most of which are either easy enough to work around
-(and still offer the benefit of a great reduction in keyboard work):
+```bash
+$ cabal build
+$ cabal clean
+$ cabal -w ghc-wmuggler2
+```
 
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
   them. (This is a more aggressive approach than `smuggler` which focuses on
@@ -181,6 +174,23 @@ But there are some caveats, most of which are either easy enough to work around
   it. This can be a useful check and better document your modules. The
   disdvantage is that imports may be reordered, comments and blank lines
   dropped, external imports mixed with external, etc.
+
+- if you import patterns synonyms from a library without naming them explicitly
+  in an import list, you do not need the `PatternSynonyms` language extension.
+  If you import them explicitly, using the `pattern` keyword, the language
+  extension is required (otherwise you will just get a syntax error on
+  compilation). `Smuggler2.Plugin` will not add that for you.
+
+`Smuggler2` is robust -- it can chew through the
+[Agda](https://github.com/agda/agda) codebase of over 370 modules with complex
+interdependencies and be tripped over by only
+
+- a couple of ambiguous exports (are we trying to export something defined in
+  the current module or something with the same name from an imported module)
+
+- and a couple of imports where both qualifed and unqualifed version of the
+  module are imported and there are references to both qualified and unqualifed
+  version of the same names
 
 - By default `Smuggler2` does not remove imports completely because an import
   may be being used to only import instances of typeclasses, So it will leave
@@ -217,11 +227,11 @@ But there are some caveats, most of which are either easy enough to work around
 - Literate Haskell `.lhs` files will procssed into ordinary haskell files wth a
   `-lhs` suffix.
 
-* `hiding` clauses may not be properly analysed. So hiding things that are not
-  used may not be spotted.
+* `hiding` clauses are not be analysed. So hiding things that are not used will
+  not be spotted. In fact, hiding imports will be discarded.
 
-* The plugin does not seem to run reliably on Windows. This is probably more
-  of an issue with the way that the tests are run, than `Smuggler2` itself.
+* The plugin does not seem to run reliably on Windows. This is probably more of
+  an issue with the way that the tests are run, than `Smuggler2` itself.
 
 * Currently `cabal` does not have a particular way of specifying plugins. (See,
   eg, https://gitlab.haskell.org/ghc/ghc/issues/11244 and

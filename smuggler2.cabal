@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               smuggler2
-version:            0.3.5.2
+version:            0.3.5.3
 synopsis:
   GHC Source Plugin that helps to minimise imports and generate explicit exports
 
@@ -66,8 +66,7 @@ common common-options
   ghc-options:
     -O2 -Wall -Wextra -Wincomplete-uni-patterns
     -Wincomplete-record-updates -Wcompat -Widentities
-    -Wredundant-constraints -fhide-source-paths
-    -fobject-code
+    -Wredundant-constraints -fhide-source-paths -fobject-code
 
   if impl(ghc >=8.10.0)
     ghc-options: -Wunused-packages -fwrite-ide-info
@@ -86,15 +85,6 @@ common common-options
     LambdaCase
     MultiParamTypeClasses
     TupleSections
-
-common executable-options
-  ghc-options: -rtsopts
-
-  if flag(debug)
-    ghc-options: -debug
-
-  if flag(threaded)
-    ghc-options: -threaded -with-rtsopts=-N
 
 library
   import:          common-options
@@ -122,6 +112,15 @@ library
   if flag(debug)
     build-depends: text
 
+common executable-options
+  ghc-options: -rtsopts
+
+  if flag(debug)
+    ghc-options: -debug
+
+  if flag(threaded)
+    ghc-options: -threaded -with-rtsopts=-N
+
 executable ghc-smuggler2
   import:         common-options
   import:         executable-options
@@ -130,6 +129,7 @@ executable ghc-smuggler2
   build-depends:
     , ghc-paths      ^>=0.1.0
     , typed-process  ^>=0.2.6
+    , smuggler2
 
 test-suite smuggler2-test
   import:         common-options

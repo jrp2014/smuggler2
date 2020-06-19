@@ -35,4 +35,12 @@
 
 - [ ]- Figure out fhy github workflow uses ghc 8.10.1 when it should be running 8.8.3
 
-- [ ] #1 Add options for handling `NoImplictPrelude` and keeping it pristine?
+- [X] Add options for handling `NoImplictPrelude` and keeping it pristine?
+
+- [ ] Add option to import using widcards only
+
+- [ ] Add the `PatternSynonym` language extension when it is required.
+
+- [ ] Rexporting of patterns
+
+- [ ] Hidings should be retained

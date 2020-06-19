@@ -100,36 +100,36 @@ getMinimalImports = mapM mk_minimal
     -- The main trick here is that if we're importing all the constructors
     -- we want to say "T(..)", but if we're importing only a subset we want
     -- to say "T(A,B,C)".  So we have to find out what the module exports.
-    to_ie _ (Avail n) -- An ordinary identifier (eg,  var, data constructor)
+    to_ie _ (Avail n) -- An ordinary identifier (eg, var, data constructor)
        = [IEVar noExt (to_ie_post_rn_var $ noLoc n)]
     to_ie _ (AvailTC n [m] []) -- type or class with absent () list
-       | n==m = [IEThingAbs noExt (to_ie_post_rn $ noLoc n)]
+       | n==m = [IEThingAbs noExt (to_ie_post_rn_name $ noLoc n)]
     to_ie iface (AvailTC n ns fs)
       = case [(xs,gs) |  AvailTC x xs gs <- mi_exports iface
                  , x == n
                  , x `elem` xs    -- Note [Partial export]
                  ] of
-           -- class / type with methods / constructors
-           [xs] | all_used xs -> [IEThingAll noExt (to_ie_post_rn_var $ noLoc n)] -- (..)
+           -- class / type with methods / constructors s
+           [xs] | all_used xs -> [IEThingAll noExt (to_ie_post_rn_name $ noLoc n)] -- (..)
 
-                | isTcOcc (occName n) -> -- class
-                   [IEThingWith noExt (to_ie_post_rn $ noLoc n) NoIEWildcard
-                                (map (to_ie_post_rn_tc . noLoc) (filter (/= n) ns))
+                | isTcOcc (occName n) -> -- typeclass -- @class Functor ...
+                   [IEThingWith noExt (to_ie_post_rn_name $ noLoc n) NoIEWildcard
+                                (map (to_ie_post_rn_varn . noLoc) (filter (/= n) ns))
                                 (map noLoc fs)]
                                           -- Note [Overloaded field import]
 
-                | otherwise   -> -- type
-                   [IEThingWith noExt (to_ie_post_rn $ noLoc n) NoIEWildcard
-                                (map (to_ie_post_rn . noLoc) (filter (/= n) ns))
+                | otherwise   -> -- type constructor (ie, @data X =@)
+                   [IEThingWith noExt (to_ie_post_rn_name $ noLoc n) NoIEWildcard
+                                (map (to_ie_post_rn_cname . noLoc) (filter (/= n) ns))
                                 (map noLoc fs)]
 
            -- record type
            _other | all_non_overloaded fs
-                           -> map (IEVar noExt . to_ie_post_rn . noLoc) $ ns
+                           -> map (IEVar noExt . to_ie_post_rn_name . noLoc) $ ns
                                  ++ map flSelector fs
                   | otherwise -> -- DuplicateRecordFields is applicable
-                      [IEThingWith noExt (to_ie_post_rn $ noLoc n) NoIEWildcard
-                                (map (to_ie_post_rn . noLoc) (filter (/= n) ns))
+                      [IEThingWith noExt (to_ie_post_rn_name $ noLoc n) NoIEWildcard
+                                (map (to_ie_post_rn_cname . noLoc) (filter (/= n) ns))
                                 (map noLoc fs)]
         where
 
@@ -141,11 +141,32 @@ getMinimalImports = mapM mk_minimal
 
           all_non_overloaded = not . any flIsOverloaded
 
+to_ie_post_rn_name :: Located name -> LIEWrappedName name
+to_ie_post_rn_name (L l n) = L l (IEName (L l n))
+
+to_ie_post_rn_var :: (HasOccName name) => Located name -> LIEWrappedName name
+to_ie_post_rn_var (L l n)
+  | isDataOcc $ occName n = L l (IEPattern (L l n))
+  | otherwise = L l (IEName (L l n))
+
+to_ie_post_rn_varn :: (HasOccName name) => Located name -> LIEWrappedName name
+to_ie_post_rn_varn (L l n)
+  | isTcOcc $ occName n = L l (IEType (L l n))
+  | otherwise = L l (IEName (L l n))
+
+to_ie_post_rn_cname :: (HasOccName name) => Located name -> LIEWrappedName name
+to_ie_post_rn_cname (L l n)
+  | isTcOcc $ occName n = L l (IEType (L l n))
+  | otherwise = L l (IEName (L l n))
+
+-- Notes
+--
+-- https://gitlab.haskell.org/ghc/ghc/-/wikis/pattern-synonyms/associating-synonyms
 
 -- An import is
 -- a var
--- a tycon -> [ (..) | ( cname1 , … , cnamen )]
--- a tycls -> [(..) | ( var1 , … , varn )]
+-- a tycls -> [(..) | ( var1 , … , varn )]          -- class, etc
+-- a tycon -> [ (..) | ( cname1 , … , cnamen )]     -- data
 
 -- cname -> var | con
 -- var -> varid | ( varsym )  -- (does not start with :)
@@ -155,7 +176,7 @@ getMinimalImports = mapM mk_minimal
 -- The name of the pattern synonym is in the same namespace as proper data constructors.
 -- Like normal data constructors, pattern synonyms can be imported through associations
 -- with a type constructor or independently.
--- To export them on their own, in an export or import specification,
+-- To export them *on their own*, in an export or import specification,
 -- you must prefix pattern names with the pattern keyword
 --
 -- GHC User Guide 9.9.5
@@ -167,19 +188,15 @@ getMinimalImports = mapM mk_minimal
 --data family type constructor is exported along with the new data constructors, regardless of
 --whether the data family is defined locally or in another module.
 
-to_ie_post_rn_var :: (HasOccName name) => Located name -> LIEWrappedName name
-to_ie_post_rn_var (L l n)
-  | isDataOcc $ occName n = L l (IEPattern (L l n))
-  | otherwise             = L l (IEName    (L l n))
-
-to_ie_post_rn :: (HasOccName name) => Located name -> LIEWrappedName name
-to_ie_post_rn (L l n)
-  | isTcOcc occ && isSymOcc occ = L l (IEType (L l n))  -- starts with :, ->, etc
-  | otherwise                   = L l (IEName (L l n))
-  where occ = occName n
-
-to_ie_post_rn_tc :: (HasOccName name) => Located name -> LIEWrappedName name
-to_ie_post_rn_tc (L l n)
-  | isTcOcc occ = L l (IEType (L l n))
-  | otherwise   = L l (IEName (L l n))
-  where occ = occName n
+-- isVarOcc -> variable name
+-- isTvOcc -> is type variable
+-- isTcOcc -> is type class name
+-- isValOcc -- either in the variable or data constructor namespaces
+-- isDataOcc -- Data constructor
+-- isDataSymOcc -> Data contructuctor starting with a symbol
+-- isSymOcc -> operator(data constructor, variable, etc)
+--
+-- So there are
+-- var -> IEName
+-- tycon -> can have IEPattern
+-- tyclas -> can have IEType type (:+:)

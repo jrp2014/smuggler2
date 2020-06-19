@@ -18,6 +18,10 @@ main = do
     ( setWorkingDirInherit . setEnvInherit $
         proc
           ghc
-          ("-fplugin=Smuggler2.Plugin" : args)
+          ( "-package-env=default" :
+            "-package smuggler2" :
+            "-fplugin=Smuggler2.Plugin" :
+            args
+          )
     )
     >>= exitWith
