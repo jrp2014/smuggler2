@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Wrapper around ghc for smuggler2
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+ghc -package-env=default -package=smuggler2 -fplugin=Smuggler2.Plugin "${@}"

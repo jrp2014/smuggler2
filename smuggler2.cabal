@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               smuggler2
-version:            0.3.5.3
+version:            0.3.6.1
 synopsis:
   GHC Source Plugin that helps to minimise imports and generate explicit exports
 
@@ -121,20 +121,22 @@ common executable-options
   if flag(threaded)
     ghc-options: -threaded -with-rtsopts=-N
 
-executable ghc-smuggler2
-  import:         common-options
-  import:         executable-options
-  hs-source-dirs: app
-  main-is:        Main.hs
-  build-depends:
-    , ghc-paths      ^>=0.1.0
-    , typed-process  ^>=0.2.6
-    , smuggler2 -any
+--executable ghc-smuggler2
+--  import:         common-options
+--  import:         executable-options
+--  hs-source-dirs: app
+--  main-is:        Main.hs
+--  build-depends:
+--    , ghc-paths      ^>=0.1.0
+--    , typed-process  ^>=0.2.6
+--    , smuggler2 -any
 
 test-suite smuggler2-test
   import:         common-options
+  import:         executable-options
   type:           exitcode-stdio-1.0
   hs-source-dirs: test
+  main-is:        Test.hs
   build-depends:
     , containers
     , directory
@@ -145,9 +147,3 @@ test-suite smuggler2-test
     , tasty
     , tasty-golden   ^>=2.3.4
     , typed-process
-
-  main-is:        Test.hs
-  ghc-options:    -rtsopts
-
-  if flag(threaded)
-    ghc-options: -threaded -with-rtsopts=-N
