@@ -129,7 +129,7 @@ executable ghc-smuggler2
   build-depends:
     , ghc-paths      ^>=0.1.0
     , typed-process  ^>=0.2.6
-    , smuggler2
+    , smuggler2 -any
 
 test-suite smuggler2-test
   import:         common-options

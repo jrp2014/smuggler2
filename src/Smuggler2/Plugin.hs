@@ -19,7 +19,6 @@ import DynFlags
     setUnsafeGlobalDynFlags,
     xopt,
     xopt_set,
-    xopt_set_unlessExplSpec,
   )
 import ErrUtils (compilationProgressMsg, fatalErrorMsg, warningMsg)
 import GHC
@@ -194,7 +193,7 @@ smugglerPlugin clopts modSummary tcEnv
           -- however, a pattern synonym is imported explicitly, the extension is
           -- required. So we switch on the @PatternSynonym@ extension for
           -- parsing the minimal imports.
-          let dflags' = xopt_set_unlessExplSpec PatternSynonyms xopt_set dflags
+          let dflags' = xopt_set dflags PatternSynonyms
 
           -- Parse the minimal imports file -- gets the annnotations too
           runParser dflags' minImpFilePath minImpFileContents >>= \case
