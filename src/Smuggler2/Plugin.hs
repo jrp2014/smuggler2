@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 
 -- |
@@ -157,7 +158,17 @@ smugglerPlugin clopts modSummary tcEnv
 
         -- Run smuggling only for its side effects; don't change the tcEnv we
         -- were givem.
-        tcEnv <$ withTiming dflags (text "smuggler2") (const ()) (smuggling dflags minImpFilePath)
+        tcEnv
+          <$ withTiming
+#if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
+            dflags
+
+#else
+            getDynFlags
+#endif
+            (text "smuggler2")
+            (const ())
+            (smuggling dflags minImpFilePath)
   where
 
     -- The original imports
