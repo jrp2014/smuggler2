@@ -73,7 +73,7 @@ import Smuggler2.Options
 import Smuggler2.Parser (runParser)
 import StringBuffer (StringBuffer (StringBuffer), lexemeToString)
 import System.Directory (removeFile)
-import System.FilePath ((-<.>), (</>), isExtensionOf, takeExtension)
+import System.FilePath (isExtensionOf, takeExtension, (-<.>), (</>))
 import System.IO (IOMode (WriteMode), withFile)
 import TcRnExports (exports_from_avail)
 import TcRnTypes
@@ -102,7 +102,7 @@ smugglerPlugin clopts modSummary tcEnv
     liftIO $ setUnsafeGlobalDynFlags dflags -- this seems to be needed for Windows only
     liftIO $ compilationProgressMsg dflags ("smuggler2 " ++ showVersion version)
 
-    -- Get imports  usage
+    -- Get imports usage
     uses <- readMutVar $ tcg_used_gres tcEnv
     let usage = findImportUsage imports uses
 
@@ -170,7 +170,6 @@ smugglerPlugin clopts modSummary tcEnv
             (const ())
             (smuggling dflags minImpFilePath)
   where
-
     -- The original imports
     imports :: [LImportDecl GhcRn]
     imports = tcg_rn_imports tcEnv
@@ -249,13 +248,11 @@ smugglerPlugin clopts modSummary tcEnv
               liftIO $
                 compilationProgressMsg
                   dflags
-                  ( "smuggler2: output written to " ++ newModulePath )
+                  ("smuggler2: output written to " ++ newModulePath)
 
               -- Clean up: delete the GHC-generated imports file
               liftIO $ removeFile minImpFilePath
-
           where
-
             -- Generates the things that would be exportabe if there were no
             -- explicit export header, so suitable for replacing one
             exportable :: RnM [AvailInfo]
@@ -265,6 +262,46 @@ smugglerPlugin clopts modSummary tcEnv
               let this_mod = tcg_mod tcEnv
               exports <- exports_from_avail Nothing rdr_env importAvails this_mod
               return (snd exports)
+
+            -- Add explict exports to the target module
+            addExplicitExports ::
+              Monad m =>
+              -- | The list of exports to be added
+              Avails ->
+              -- | target module
+              ParsedSource ->
+              TransformT m ParsedSource
+            addExplicitExports exports t@(L astLoc hsMod) =
+              case exportAction options of
+                NoExportProcessing -> return t
+                AddExplicitExports ->
+                  -- Only add explicit exports if there are none and there is a
+                  -- @module X where ...@
+                  if isNothing currentExplicitExports && isJust (hsmodName hsMod)
+                    then result
+                    else return t
+                ReplaceExports ->
+                  if isJust (hsmodName hsMod)
+                    then result
+                    else return t
+              where
+                currentExplicitExports :: Maybe (Located [LIE GhcPs])
+                currentExplicitExports = hsmodExports hsMod
+                -- This does all the export replacement work
+                result :: Monad m => TransformT m ParsedSource
+                result
+                  | null exports = return t -- there is nothing exportable
+                  | otherwise = do
+                    -- Generate the exports list
+                    exportsList <- mapM mkExportAnnT exports
+
+                    -- add commas in between and parens around
+                    mapM_ addTrailingCommaT (init exportsList)
+                    lExportsList <- mkLoc exportsList >>= mkParenT unLoc
+
+                    -- No need to do any graftTing here as we have been modifying the
+                    -- annotations in the current transformation
+                    return $ L astLoc hsMod {hsmodExports = Just lExportsList}
 
             --  Replace a target module's imports
             --  See <https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs>
@@ -288,43 +325,6 @@ smugglerPlugin clopts modSummary tcEnv
                   -- nudge down the imports list onto a new line
                   unless (null imps) $ setEntryDPT (head imps) (DP (2, 0))
                   return $ L l m {hsmodImports = imps}
-
-            -- Add explict exports to the target module
-            addExplicitExports ::
-              Monad m =>
-              -- | The list of exports to be added
-              Avails ->
-              -- | target module
-              ParsedSource ->
-              TransformT m ParsedSource
-            addExplicitExports exports t@(L astLoc hsMod) =
-              case exportAction options of
-                NoExportProcessing -> return t
-                AddExplicitExports ->
-                  -- Only add explicit exports if there are none.
-                  -- Seems to work even if there is no explict module declaration
-                  -- presumably because the annotations that we generate are just
-                  -- unused by exactPrint
-                  if isNothing currentExplicitExports then result else return t
-                ReplaceExports -> result
-              where
-                currentExplicitExports :: Maybe (Located [LIE GhcPs])
-                currentExplicitExports = hsmodExports hsMod
-                -- This does all the export replacement work
-                result :: Monad m => TransformT m ParsedSource
-                result
-                  | null exports = return t -- there is nothing exportable
-                  | otherwise = do
-                    -- Generate the exports list
-                    exportsList <- mapM mkExportAnnT exports
-
-                    -- add commas in between and parens around
-                    mapM_ addTrailingCommaT (init exportsList)
-                    lExportsList <- mkLoc exportsList >>= mkParenT unLoc
-
-                    -- No need to do any graftTing here as we have been modifying the
-                    -- annotations in the current transformation
-                    return $ L astLoc hsMod {hsmodExports = Just lExportsList}
 
     -- This version of the GHC function ignores implicit imports, as they
     -- cannot be parsed back in.  (There is an extraneous (implicit))
@@ -359,19 +359,20 @@ smugglerPlugin clopts modSummary tcEnv
       where
         notImplicit :: ImportDecl pass -> Bool
         notImplicit = not . ideclImplicit
-        --
+
         notInstancesOnly :: ImportDecl pass -> Bool
         notInstancesOnly i = case ideclHiding i of
           Just (False, L _ []) -> False
           _ -> True
-        --
+
         keepInstanceOnlyImports :: Bool
         keepInstanceOnlyImports = importAction options /= MinimiseImports
+
         -- Ignore explicit instance only imports, unless the 'MinimiseImports'
         -- option is specified
         letThrough :: LImportDecl pass -> Bool
         letThrough (L _ i) = notImplicit i && (keepInstanceOnlyImports || notInstancesOnly i)
-        --
+
         leaveOpen :: LImportDecl pass -> LImportDecl pass
         leaveOpen (L l decl) = L l $ case ideclHiding decl of
           Just (False, L _ _) -- ie, not hiding
