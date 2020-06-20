@@ -44,3 +44,6 @@
 - [ ] Rexporting of patterns
 
 - [ ] Hidings should be retained
+
+- [ ] Initial language pragmas are not retained if there is no `module ...
+  where`

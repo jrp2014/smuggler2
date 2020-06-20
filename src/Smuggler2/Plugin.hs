@@ -20,7 +20,7 @@ import DynFlags
     xopt,
     xopt_set,
   )
-import ErrUtils (compilationProgressMsg, fatalErrorMsg, warningMsg)
+import ErrUtils (compilationProgressMsg, fatalErrorMsg, warningMsg, withTiming)
 import GHC
   ( GenLocated (L),
     GhcPs,
@@ -157,7 +157,7 @@ smugglerPlugin clopts modSummary tcEnv
 
         -- Run smuggling only for its side effects; don't change the tcEnv we
         -- were givem.
-        tcEnv <$ smuggling dflags minImpFilePath
+        tcEnv <$ withTiming dflags (text "smuggler2") (const ()) (smuggling dflags minImpFilePath)
   where
 
     -- The original imports

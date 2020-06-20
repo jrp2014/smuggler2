@@ -224,8 +224,7 @@ interdependencies and be tripped over by only
 - Literate Haskell `.lhs` files will procssed into ordinary haskell files wth a
   `-lhs` suffix.
 
-* `hiding` clauses are not be analysed. So hiding things that are not used will
-  not be spotted. In fact, hiding imports will be discarded.
+* `hiding` imports are not needed and replaced by explicit ones.
 
 * The plugin does not seem to run reliably on Windows. This is probably more of
   an issue with the way that the tests are run, than `Smuggler2` itself.
