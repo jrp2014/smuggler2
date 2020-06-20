@@ -1,7 +1,5 @@
 # Things to be done
 
-- [ ] Does hiding work? No, as ghc doesn't check them
-
 - [X] Does CPP work? Yes, but the mark is dropped, so put output into a new
   file.  Similarly for literate Haskell.
 
@@ -33,17 +31,17 @@
 
 - [ ] Check that an export does not need to be qualified
 
-- [ ]- Figure out fhy github workflow uses ghc 8.10.1 when it should be running 8.8.3
+- [ ] Figure out why github workflow uses ghc 8.10.1 when it should be running 8.8.3
 
 - [X] Add options for handling `NoImplictPrelude` and keeping it pristine?
 
 - [ ] Add option to import using widcards only
 
-- [ ] Add the `PatternSynonym` language extension when it is required.
+- [ ] Rexporting of patterns?
 
-- [ ] Rexporting of patterns
-
-- [ ] Hidings should be retained
-
-- [ ] Initial language pragmas are not retained if there is no `module ...
+- [X] Initial language pragmas are not retained if there is no `module ...
   where`
+
+- [ ] `ghc-exactprint` adds `\r` into comments at eol. Woraround?
+
+- [ ] check `getMinimalImports` for corner cases

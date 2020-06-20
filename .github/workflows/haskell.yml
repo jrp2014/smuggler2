@@ -64,4 +64,5 @@ jobs:
 
       - name: Test
         run: |
-          cabal test all --enable-tests
+          # -j1 because tests fail in Windows otherwise
+          cabal test --test-option=--delete-output=onpass --test-option=-j1
