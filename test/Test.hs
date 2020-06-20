@@ -11,7 +11,7 @@ import GHC.Paths (ghc)
 import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Directory (doesDirectoryExist, getDirectoryContents)
 import System.Environment (lookupEnv)
-import System.FilePath (takeBaseName, takeExtension, (-<.>), (</>))
+import System.FilePath ((-<.>), (</>), takeBaseName, takeExtension)
 import System.Process.Typed
   ( ProcessConfig,
     proc,
@@ -70,9 +70,18 @@ goldenTests opts = do
       [ goldenVsFileDiff
           (takeBaseName testFile) -- test name
           ( \ref new -> -- how to display diffs
-              -- The -G. is needed because cabal sdist changes the golden file
-              -- permissions and so all the tests fail.
-              ["git", "diff", "-G.", "--ignore-cr-at-eol", "--no-index", ref, new]
+          -- The -G. is needed because cabal sdist changes the golden file
+          -- permissions and so all the tests fail.
+              [ "git",
+                "diff",
+                "-G.",
+                "--ignore-cr-at-eol",
+                "--ws-error-highlight=all",
+                "--no-index",
+                "--exit-code",
+                ref,
+                new
+              ]
           )
           (testFile -<.> testName ++ "-golden") -- golden file
           outputFilename
@@ -87,9 +96,10 @@ goldenTests opts = do
       ]
   where
     testName = fromMaybe "NoNewExtension" (newExtension opts)
+
 -- | A version of 'Test.Tasty.Golden.findByExtension' that does not look into
 -- subdirectories.  This allows tests to be run on a module that imports other
--- modules without risking the race condition where smuggler is being run
+-- modules without risking the race condition where smuggler2 is being run
 -- on the imported module directly, and also when the importing module is being
 -- tested. ('Tasty' runs test in parallel and the same output files are
 -- produced in both direct and imported cases.) Putting the imported module in
