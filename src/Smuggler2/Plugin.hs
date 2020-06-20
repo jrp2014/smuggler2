@@ -34,6 +34,7 @@ import GHC
     ModSummary (ms_hspp_buf, ms_mod),
     Module (moduleName),
     ParsedSource,
+    hsmodName,
     ml_hs_file,
     moduleNameString,
     ms_location,
