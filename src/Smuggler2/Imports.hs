@@ -141,6 +141,10 @@ getMinimalImports = mapM mk_minimal
 
           all_non_overloaded = not . any flIsOverloaded
 
+
+-- The following were originally one function.  Splitting it out this way allows
+-- different variants to be used in different contexts above.  This seems to
+-- work, but needs review.  Eg, do we need to use an isSymOcc in some cases?
 to_ie_post_rn_name :: Located name -> LIEWrappedName name
 to_ie_post_rn_name (L l n) = L l (IEName (L l n))
 
