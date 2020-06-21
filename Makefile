@@ -6,23 +6,19 @@
 all: build test doc
 
 build:
+	cabal outdated
 	# Creates a package environment file needed to get the tests to run in some
 	# environments (eg, travis).  Use with care as it can lead to unexpected
 	# results if you are not aware that ghc is using it; it is a normally hidden
 	# dot file.
-	cabal outdated
-	cabal build all:libs
-#	cabal build all:exes
-	cabal build all:tests
-
-	cabal build --write-ghc-environment-files=always
+	cabal build all --write-ghc-environment-files=always
 
 debug:
 	cabal build -fdebug
 
 install:
 	cabal install --lib smuggler2
-	cabal install exe:ghc-smuggler2 --overwrite-policy=always
+	#cabal install exe:ghc-smuggler2 --overwrite-policy=always
 
 test: build
 	git diff --check

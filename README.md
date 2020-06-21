@@ -66,13 +66,13 @@ means that you can also exclude `smuggler2` dependencies from your final builds.
 ### Alternatively, using a local version
 
 If you have installed `smuggler2` from a local copy of this repository, you may
-need to add `-package-env default -package smuggler2` to your `ghc-options` if
+need to add `-package-env default -package smuggler2` to your `ghc-options`, if
 you did not install using the `--lib` flag to `cabal install`. (This will depend
 on your setup and your version of `cabal`.
 
 ### Or use a `ghc` wrapper
 
-The repostory also has a very simple `ghc` wrapper `ghc-smuggler2` in the `app`
+The repository also has a very simple `ghc` wrapper `ghc-smuggler2` in the `app`
 folder that you can tweak to accomodate your local build environment. This
 allows you to run the plugin over your sources without modifying your `.cabal`
 file:
@@ -86,8 +86,6 @@ or just
 ```bash
 $ cabal build -w ghc-smuggler2
 ```
-
-Smuggler2 tries not to change files when there is no work to do.
 
 You can just run `ghcid` as usual:
 
@@ -122,7 +120,7 @@ $ ghcid --command='cabal repl'
 - `LeaveOpenImports` and `MakeOpenImports` take a comma-separated list of module
   names. The specified modules are to be left open if they were open in the
   sourcee (in the case of `LeaveOpenImports`) and made open even if they were
-  not originall (in the case of `MakeOpenImports`). For example, you could add
+  not originally (in the case of `MakeOpenImports`). For example, you could add
 
   ```bash
   -fplugin-opt=Smuggler2.Plugin:LeaveOpenImports:Relude,RIO,Prelude,Some.Module
@@ -149,19 +147,6 @@ $ ghcid --command='cabal repl'
 
 ## Caveats
 
-Because `cabal` and `ghc` don't have full support for distinguishing dependent
-packages from plug-ins you will probably want to ensure that the build the
-dependencies for your project that are installed into your local package db
-first, before enabling `Smuggler2`, or `ghc-smuggler2` otherwise they will all
-be processed by it too, as your project builds, which should do no harm, but
-will increase your build time:
-
-```bash
-$ cabal build
-$ cabal clean
-$ cabal -w ghc-smuggler2
-```
-
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
   them. (This is a more aggressive approach than `smuggler` which focuses on
   removing redundant imports.) It has advantages and disadvantages. The
@@ -172,11 +157,55 @@ $ cabal -w ghc-smuggler2
   disdvantage is that imports may be reordered, comments and blank lines
   dropped, external imports mixed with external, etc.
 
-- if you import patterns synonyms from a library without naming them explicitly
+* By default `Smuggler2` does not remove imports completely because an import
+  may be being used to only import instances of typeclasses, So it will leave
+  stubs like
+
+  ```haskell
+  import Mod ()
+  ```
+
+  that you may want to remove manually. Alternatively use the `MinimiseImports`
+  option to remove them anyway, at the risk of producing code that fails to
+  compile.
+
+* CPP files will not be processed correctly: the imports will be generated for
+  current CPP settings and any CPP annotations in the import block will be
+  discarded. This may be a particular problem if you are writing code for
+  several generations of `ghc` and `base` for example. Nevetheless, `Smuggler2`
+  will generate a new CPP preprocessed output file with a `-cpp` suffix.
+  [retrie](https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs)
+  solves this problem generating all possible versions of the module
+  (exponential in the number of `#if` directives), operating on each version
+  individually, and splicing results back into the original file. A tour de
+  force!
+
+* Because `cabal` and `ghc` don't have full support for distinguishing dependent
+  packages from plug-ins you will probably want to ensure that the build the
+  dependencies for your project that are installed into your local package db
+  first, before enabling `Smuggler2`, or `ghc-smuggler2` otherwise they will all
+  be processed by it too, as your project builds, which should do no harm, but
+  will increase your build time:
+
+  ```bash
+  $ cabal build --dependencies-only
+  $ cabal clean
+  $ cabal -w ghc-smuggler2
+  ```
+
+* if you import patterns synonyms from a library without naming them explicitly
   in an import list, you do not need the `PatternSynonyms` language extension.
   If you import them explicitly, using the `pattern` keyword, the language
   extension is required (otherwise you will just get a syntax error on
   compilation). `Smuggler2.Plugin` will not add that for you.
+
+* Multiple separate import lines referring to the same library are not
+  consolidated
+
+* Literate Haskell `.lhs` files will processed into ordinary haskell files wth a
+  `-lhs` suffix.
+
+* `hiding` imports are not needed and replaced by explicit ones.
 
 `Smuggler2` is robust -- it can chew through the
 [Agda](https://github.com/agda/agda) codebase of over 370 modules with complex
@@ -189,47 +218,16 @@ interdependencies and be tripped over by only
   module are imported and there are references to both qualified and unqualifed
   version of the same names
 
-- By default `Smuggler2` does not remove imports completely because an import
-  may be being used to only import instances of typeclasses, So it will leave
-  stubs like
-
-  ```haskell
-  import Mod ()
-  ```
-
-  that you may want to remove manually. Alternatively use the `MinimiseImports`
-  option to remove them anyway, at the risk of producing code that fails to
-  compile.
-
-- CPP files will not be processed correctly: the imports will be generated for
-  current CPP settings and any CPP annotations in the import block will be
-  discarded. This may be a particular problem if you are writing code for
-  several generations of `ghc` and `base` for example. Nevetheless, `Smuggler2`
-  will generate a new CPP preprocessed output file with a `-cpp` suffix.
-  [retrie](https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs)
-  solves this problem generating all possible versions of the module
-  (exponential in the number of `#if` directives), operating on each version
-  individually, and splicing results back into the original file. A tour de
-  force!
-
 - `smuggler2` depends on the current `ghc` compiler and `base` library to check
   whether an import is redundant. Different versions of the compiler may, of
   course, need different slightly imports, typically from `base`. The
   [base library changelog](https://hackage.haskell.org/package/base/changelog)
   provides some details of what was made available when.
 
-- Multiple separate import lines referring to the same library are not
-  consolidated
-
-- Literate Haskell `.lhs` files will procssed into ordinary haskell files wth a
-  `-lhs` suffix.
-
-* `hiding` imports are not needed and replaced by explicit ones.
-
-* The plugin does not seem to run reliably on Windows. This is probably more of
+- The plugin does not seem to run reliably on Windows. This is probably more of
   an issue with the way that the tests are run, than `Smuggler2` itself.
 
-* Currently `cabal` does not have a particular way of specifying plugins. (See,
+- Currently `cabal` does not have a particular way of specifying plugins. (See,
   eg, https://gitlab.haskell.org/ghc/ghc/issues/11244 and
   https://github.com/haskell/cabal/issues/2965) which would allow cleaner
   separation of user code and plugin-code
@@ -244,6 +242,8 @@ Requirements:
   on `ghc-8.6.5` because it seems to need to import `Data.Bool` whereas later
   versions of GHC don't. The results compile on `ghc-8.6.5` and later anyway,
   but the imports are not as minimal for later versions as they could be.
+  `ghc-exactprint 0.6.3.1` adds extra '\r` inside comments under Windows, so the
+  tests fail.
 - `cabal >= 3.0` (ideally `3.2`)
 - The Windows version of the plugin is a bit flaky because of apparent compiler
   bugs.
@@ -255,13 +255,18 @@ maintenance tasks, including building the package.
 
 ```shell
 $ cabal update
-$ cabal build
+$ cabal build --write-ghc-environment-files=always
 ```
+
+Writing the ghc environment file allows tests to be run from within the
+repository using `ghc -fplugin=Smuggler2.Plugin` without needing to use
+`cabal exec -- ghc -fplugin=Smugler2.Plugin` or a `-package smuggler2` flag.
+`cabal clean` to get rid of it, to avoid surprises when you are done.
 
 To build with debugging:
 
 ```shell
-$ cabal build -fdebug
+$ cabal build -fdebug --write-ghc-environment-files=always
 ```
 
 Curently this just adds an `-fdump-minimal-imports` parameter to GHC
@@ -272,13 +277,13 @@ compilation.
 There is a `tasty-golden`-based test suite that can be run by
 
 ```shell
-$ cabal test smuggler-test --enable-tests
+$ cabal test smuggler2-test --enable-tests
 ```
 
 Further help can be found by
 
 ```shell
-$ cabal run smuggler-test -- --help
+$ cabal run smuggler2-test -- --help
 ```
 
 (note the extra `--`)
@@ -293,11 +298,6 @@ to update the golden outputs to the current results of (failing) tests.
 
 It is sometimes necessary to run `cabal clean` before running tests to ensure
 that old build artefacts do not lead to misleading results.
-
-`smuggler-test` uses `cabal exec ghc` internally to run a test. The `cabal`
-command that is to be used to do that can be set using the `CABAL` environment
-variable. This may be helpful for certain workflows where `cabal` is not in the
-current path, or you want to add extra flags to the `cabal` command.
 
 Importing a test module from another test module in the same directory is likely
 to lead to race conditions as 'Tasty' runs tests in parallel and so will try to

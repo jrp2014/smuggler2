@@ -10,7 +10,6 @@ import GHC (mkModuleName, moduleNameString)
 import GHC.Paths (ghc)
 import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Directory (doesDirectoryExist, getDirectoryContents)
-import System.Environment (lookupEnv)
 import System.FilePath ((-<.>), (</>), takeBaseName, takeExtension)
 import System.Process.Typed
   ( ProcessConfig,

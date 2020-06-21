@@ -60,7 +60,7 @@ jobs:
         run: |
           cabal update
           cabal clean
-          cabal build all --enable-tests
+          cabal build all --enable-tests --write-ghc-environment-files=always
 
       - name: Test
         run: |
