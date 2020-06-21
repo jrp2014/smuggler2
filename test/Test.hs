@@ -132,32 +132,21 @@ findByExtension' extsList = go
 main :: IO ()
 main = defaultMain =<< testOptions optionsList
 
--- | Use `cabal exec` to run the compilation, so that the smuggler plugin is
--- picked up from the local database.  GHC alone would use the global one.
+-- | Run a compilation. Assumes that @smuggler2@ has been built with
+-- @--write-ghc-environment-files=always@ so that it is picked up from
+-- the local database.
 compile :: FilePath -> Options -> IO ()
 compile testcase opts = do
-  cabalPath <- lookupEnv "CABAL" -- find, eg, @/opt/ghc/bin/cabal@ or @cabal -vnormal+nowrap@
-  let cabalCmd = words $ fromMaybe "cabal" cabalPath -- default to @cabal@ if @CABAL@ is not set
-  let cabalConfig =
+  let ghcConfig =
         setWorkingDirInherit . setEnvInherit $
           proc
-            (head cabalCmd)
-            (tail cabalCmd ++ cabalArgs) ::
-          ProcessConfig () () ()
-  runProcess_ cabalConfig
+            ghc
+            ghcArgs :: ProcessConfig () () ()
+  runProcess_ ghcConfig
   where
-    cabalArgs :: [String]
-    cabalArgs =
-      -- - not sure why it is necessary to mention the smuggler2 package explicitly,
-      --   but it appears to be hidden otherwise.
-      -- - This also puts the .imports files that smuggler2 generates somewhere they
-      --   can easily be found
-      [ "--with-compiler=" ++ ghc,
-        "exec",
-        ghc,
-        "--",
-        "-package smuggler2",
-        "-v0",
+    ghcArgs :: [String]
+    ghcArgs =
+      [ "-v0",
         "-dumpdir=" ++ testDir,
         "-fno-code",
         "-i" ++ testDir,

@@ -15,7 +15,7 @@ build:
 #	cabal build all:exes
 	cabal build all:tests
 
-	#cabal build # --write-ghc-environment-files=always
+	cabal build --write-ghc-environment-files=always
 
 debug:
 	cabal build -fdebug

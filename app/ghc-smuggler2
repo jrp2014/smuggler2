@@ -5,4 +5,5 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ghc -package-env=default -package=smuggler2 -fplugin=Smuggler2.Plugin "${@}"
+#ghc -package-env=default -package=smuggler2 -fplugin=Smuggler2.Plugin "${@}"
+ghc -fplugin=Smuggler2.Plugin "${@}"
