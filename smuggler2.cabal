@@ -147,4 +147,4 @@ test-suite smuggler2-test
     , smuggler2
     , tasty
     , tasty-golden   ^>=2.3.4
-    , typed-process
+    , process

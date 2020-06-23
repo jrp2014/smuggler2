@@ -242,7 +242,7 @@ smugglerPlugin clopts modSummary tcEnv
                       ++ wasLhs
 
               -- Print the result
-              let newContent = exactPrint astHsMod' annsHsMod'
+              let newContent = crnlTonl $ exactPrint astHsMod' annsHsMod'
               let newModulePath = modulePath -<.> ext
               liftIO $ writeFile newModulePath newContent
 
@@ -405,3 +405,11 @@ smugglerPlugin clopts modSummary tcEnv
     --
     strBufToStr :: StringBuffer -> String
     strBufToStr sb@(StringBuffer _ len _) = lexemeToString sb len
+
+    -- This is a workaround until 'ghc-exactprint' stops inserting (preserving)
+    -- extra @\r@ at the end of comment lines.
+    crnlTonl :: String -> String
+    crnlTonl ('\r' : '\n' : rest) = '\n' : crnlTonl rest
+    crnlTonl (c : rest) = c : crnlTonl rest
+    crnlTonl [] = []
+

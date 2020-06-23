@@ -10,14 +10,9 @@ import GHC (mkModuleName, moduleNameString)
 import GHC.Paths (ghc)
 import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
 import System.Directory (doesDirectoryExist, getDirectoryContents)
+import System.Exit
 import System.FilePath ((-<.>), (</>), takeBaseName, takeExtension)
-import System.Process.Typed
-  ( ProcessConfig,
-    proc,
-    runProcess_,
-    setEnvInherit,
-    setWorkingDirInherit,
-  )
+import System.Process
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Golden (goldenVsFileDiff, writeBinaryFile)
 
@@ -136,16 +131,16 @@ main = defaultMain =<< testOptions optionsList
 -- the local database.
 compile :: FilePath -> Options -> IO ()
 compile testcase opts = do
-  let ghcConfig =
-        setWorkingDirInherit . setEnvInherit $
-          proc
-            ghc
-            ghcArgs :: ProcessConfig () () ()
-  runProcess_ ghcConfig
+  (_, _, _, pid) <- createProcess (proc ghc ghcArgs) {  use_process_jobs = True }
+  r <- waitForProcess pid
+  return $ case r of
+    ExitSuccess -> ()
+    ExitFailure c -> error $ "Failed to compile " ++ testcase ++ ". Exit code " ++ show c
+
   where
     ghcArgs :: [String]
     ghcArgs =
-      [ "-v0",
+      [ --"-v0",
         "-dumpdir=" ++ testDir,
         "-fno-code",
         "-i" ++ testDir,
