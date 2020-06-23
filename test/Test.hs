@@ -140,7 +140,7 @@ compile testcase opts = do
   where
     ghcArgs :: [String]
     ghcArgs =
-      [ --"-v0",
+      [ "-v0",
         "-dumpdir=" ++ testDir,
         "-fno-code",
         "-i" ++ testDir,
