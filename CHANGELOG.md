@@ -7,6 +7,7 @@ The change log is available [on GitHub][2].
 
 ##  Unreleased
 - print out timings / memory usage, when `-v2` or greater is set
+- test harness tweaks
 
 ##  [0.3.6.1]: --  19 June 2020
 - improve handling of pattern synonyms

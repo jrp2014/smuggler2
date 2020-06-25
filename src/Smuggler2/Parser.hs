@@ -25,12 +25,12 @@ import TcRnTypes (RnM)
 -- (which should never happen). We need to use
 -- 'Language.Haskell.GHC.ExactPrint.parseModuleFromStringInternal'
 -- because 'Language.Haskell.GHC.ExactPrintparseModuleFromString'
--- doesn't pick up the correct 'DynFlags' in -- some cases.
+-- doesn't pick up the correct 'DynFlags' in some cases.
 runParser ::
   DynFlags -> FilePath -> String -> RnM (Either () (Anns, ParsedSource))
 runParser dflags fileName fileContents = do
   -- Withoout the following, comments are stripped (see #10942)
-  -- It would be more efficient, but less visible to apply this tweak at the
+  -- It would be more efficient, but less visible, to apply this tweak at the
   -- outset, in the main plugin function, but keep it here for visibility
   -- See also https://gitlab.haskell.org/ghc/ghc/-/wikis/api-annotations, which
   -- notes that the flags are returned as annotations by the

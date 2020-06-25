@@ -100,7 +100,11 @@ smugglerPlugin clopts modSummary tcEnv
     return tcEnv
   | otherwise = do
     dflags <- getDynFlags
-    liftIO $ setUnsafeGlobalDynFlags dflags -- this seems to be needed for Windows only
+#ifdef WINDOWS
+    -- Mysterious incantation that seems to prevent some
+    -- @v_unsafeGlobalDynFlags: settings not initialised@ panics under Windows
+    liftIO $ setUnsafeGlobalDynFlags dflags
+#endif
     liftIO $ compilationProgressMsg dflags ("smuggler2 " ++ showVersion version)
 
     -- Get imports usage

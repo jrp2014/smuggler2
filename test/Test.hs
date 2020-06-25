@@ -1,20 +1,35 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
+module Main (
+  testDir,
+  optionsList,
+  mkExt,
+  testOptions,
+  goldenTests,
+  findByExtension',
+  main,
+  compile ) where
 
-import Control.Monad (forM)
-import Data.List (intercalate, sort)
-import Data.Maybe (fromMaybe)
-import qualified Data.Set as Set (fromList, member)
-import GHC (mkModuleName, moduleNameString)
-import GHC.Paths (ghc)
-import Smuggler2.Options (ExportAction (..), ImportAction (..), Options (..))
-import System.Directory (doesDirectoryExist, getDirectoryContents)
-import System.Exit
-import System.FilePath ((-<.>), (</>), takeBaseName, takeExtension)
+import Control.Monad ( forM )
+import Data.List ( intercalate, sort )
+import Data.Maybe ( fromMaybe )
+import qualified Data.Set as Set ( fromList, member )
+import GHC ( mkModuleName, moduleNameString )
+import GHC.Paths ( ghc )
+import Smuggler2.Options
+    ( ExportAction(..), ImportAction(..), Options(..) )
+import System.Directory
+    ( doesDirectoryExist, getDirectoryContents )
+import System.Exit ( ExitCode(ExitFailure, ExitSuccess) )
+import System.FilePath
+    ( (-<.>), (</>), takeBaseName, takeExtension )
 import System.Process
-import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Golden (goldenVsFileDiff, writeBinaryFile)
+    ( proc,
+      waitForProcess,
+      withCreateProcess,
+      CreateProcess(use_process_jobs) )
+import Test.Tasty ( TestTree, defaultMain, testGroup )
+import Test.Tasty.Golden ( goldenVsFileDiff, writeBinaryFile )
 
 -- | Where the tests are, relative to the project level cabal file
 testDir :: FilePath
@@ -114,9 +129,7 @@ findByExtension' extsList = go
       let entries = filter (not . (`elem` [".", ".."])) allEntries
       fmap concat $ forM entries $ \e -> do
         let path = dir ++ "/" ++ e
-        isDir <-
-          doesDirectoryExist
-            path
+        isDir <- doesDirectoryExist path
         return $
           if isDir
             then [] -- don't recurse
@@ -130,13 +143,15 @@ main = defaultMain =<< testOptions optionsList
 -- @--write-ghc-environment-files=always@ so that it is picked up from
 -- the local database.
 compile :: FilePath -> Options -> IO ()
-compile testcase opts = do
-  (_, _, _, pid) <- createProcess (proc ghc ghcArgs) {  use_process_jobs = True }
-  r <- waitForProcess pid
-  return $ case r of
-    ExitSuccess -> ()
-    ExitFailure c -> error $ "Failed to compile " ++ testcase ++ ". Exit code " ++ show c
-
+compile testcase opts = withCreateProcess
+  (proc ghc ghcArgs)
+    { use_process_jobs = True }
+  $ \_stdin _stdout _stderr ph -> do
+    r <- waitForProcess ph
+    return $ case r of
+      ExitSuccess -> ()
+      ExitFailure c ->
+        error $ "Failed to compile " ++ testcase ++ ". Exit code " ++ show c
   where
     ghcArgs :: [String]
     ghcArgs =
@@ -155,9 +170,10 @@ compile testcase opts = do
                 mo = intercalate "," (moduleNameString <$> makeOpenImports opts)
              in -- The extension should have been set by 'optionsList'
                 -- The rest of the list are the other arguments for the test
-                ( fromMaybe "missng" ne : [show ia, show ea]
-                    ++  ["LeaveOpenImports:" ++ lo | not (null lo)]
-                    ++  ["MakeOpenImports:" ++ mo | not (null mo)]
+                ( fromMaybe "missng" ne :
+                  [show ia, show ea]
+                    ++ ["LeaveOpenImports:" ++ lo | not (null lo)]
+                    ++ ["MakeOpenImports:" ++ mo | not (null mo)]
                 )
           )
         ++ [testcase]
