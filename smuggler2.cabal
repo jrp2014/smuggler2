@@ -110,9 +110,6 @@ library
     , split           ^>=0.2.3
     , syb             ^>=0.7.1
 
-  if flag(debug)
-    build-depends: text
-
 common executable-options
   ghc-options: -rtsopts
 
@@ -147,4 +144,4 @@ test-suite smuggler2-test
     , smuggler2
     , tasty
     , tasty-golden   ^>=2.3.4
-    , process
+    , typed-process

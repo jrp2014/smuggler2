@@ -29,7 +29,7 @@ import TcRnTypes (RnM)
 runParser ::
   DynFlags -> FilePath -> String -> RnM (Either () (Anns, ParsedSource))
 runParser dflags fileName fileContents = do
-  -- Withoout the following, comments are stripped (see #10942)
+  -- Without the following, comments are stripped (see #10942)
   -- It would be more efficient, but less visible, to apply this tweak at the
   -- outset, in the main plugin function, but keep it here for visibility
   -- See also https://gitlab.haskell.org/ghc/ghc/-/wikis/api-annotations, which

@@ -27,6 +27,7 @@ test: build
 clean:
 	cabal clean
 	cabal v1-clean
+	test/clean.sh
 
 accept:
 	cabal run smuggler2-test -- --accept --delete-output=onpass

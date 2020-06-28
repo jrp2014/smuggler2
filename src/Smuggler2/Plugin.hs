@@ -100,7 +100,7 @@ smugglerPlugin clopts modSummary tcEnv
     return tcEnv
   | otherwise = do
     dflags <- getDynFlags
-#ifdef WINDOWS
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__) || defined (WINDOWS)
     -- Mysterious incantation that seems to prevent some
     -- @v_unsafeGlobalDynFlags: settings not initialised@ panics under Windows
     liftIO $ setUnsafeGlobalDynFlags dflags

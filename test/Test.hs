@@ -10,6 +10,7 @@ module Main (
   main,
   compile ) where
 
+
 import Control.Monad ( forM )
 import Data.List ( intercalate, sort )
 import Data.Maybe ( fromMaybe )
@@ -23,13 +24,10 @@ import System.Directory
 import System.Exit ( ExitCode(ExitFailure, ExitSuccess) )
 import System.FilePath
     ( (-<.>), (</>), takeBaseName, takeExtension )
-import System.Process
-    ( proc,
-      waitForProcess,
-      withCreateProcess,
-      CreateProcess(use_process_jobs) )
+import System.Process.Typed ( proc, runProcess )
 import Test.Tasty ( TestTree, defaultMain, testGroup )
 import Test.Tasty.Golden ( goldenVsFileDiff, writeBinaryFile )
+
 
 -- | Where the tests are, relative to the project level cabal file
 testDir :: FilePath
@@ -143,15 +141,12 @@ main = defaultMain =<< testOptions optionsList
 -- @--write-ghc-environment-files=always@ so that it is picked up from
 -- the local database.
 compile :: FilePath -> Options -> IO ()
-compile testcase opts = withCreateProcess
-  (proc ghc ghcArgs)
-    { use_process_jobs = True }
-  $ \_stdin _stdout _stderr ph -> do
-    r <- waitForProcess ph
-    return $ case r of
-      ExitSuccess -> ()
-      ExitFailure c ->
-        error $ "Failed to compile " ++ testcase ++ ". Exit code " ++ show c
+compile testcase opts = do
+  r <- runProcess (proc ghc ghcArgs)
+  return $ case r of
+    ExitSuccess -> ()
+    ExitFailure c ->
+      error $ "Failed to compile " ++ testcase ++ ". Exit code " ++ show c
   where
     ghcArgs :: [String]
     ghcArgs =
