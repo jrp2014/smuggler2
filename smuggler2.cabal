@@ -22,11 +22,14 @@ copyright:          2020 jrp2014, Dmitrii Kovanikov, Veronika Romashkina
 category:           Development, Refactoring, Compiler Plugin
 build-type:         Simple
 extra-doc-files:
-  README.md
   CHANGELOG.md
+  README.md
   TODO.md
 
 extra-source-files:
+  .hlint.yaml
+  Makefile
+  Setup.hs
   test/tests/**/*.hs
   test/tests/**/*.MinimiseImportsNoExportProcessingPreludeDataVersion-golden
   test/tests/**/*.MinimiseImportsReplaceExports-golden
@@ -34,15 +37,13 @@ extra-source-files:
   test/tests/**/*.NoImportProcessingNoExportProcessing-golden
   test/tests/**/*.NoImportProcessingReplaceExports-golden
   test/tests/**/*.PreserveInstanceImportsNoExportProcessingPrelude-golden
-  Makefile
-  Setup.hs
   weeder.dhall
-  .hlint.yaml
 
 -- wildcards are allowed only in the basename
 --test/tests/*.*-golden
 
-tested-with:        GHC ==8.6.5 || ==8.8.3 || ==8.10.1
+tested-with:
+  GHC ==8.6.5 || ==8.8.3 || ==8.10.1 || ==8.10.2 || ==8.10.3
 
 flag debug
   description: Enable debugging support
