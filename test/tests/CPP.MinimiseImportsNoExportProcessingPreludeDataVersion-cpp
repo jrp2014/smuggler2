@@ -1,5 +1,24 @@
 {-# LANGUAGE CPP #-}
+module CPP where
 
-module CPP2 where
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 str = "abc" <> "def"
+

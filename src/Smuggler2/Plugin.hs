@@ -17,7 +17,9 @@ import Data.Version (showVersion)
 import DynFlags
   ( DynFlags (dumpDir),
     HasDynFlags (getDynFlags),
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__) || defined (WINDOWS)
     setUnsafeGlobalDynFlags,
+#endif
     xopt,
     xopt_set,
   )
@@ -414,6 +416,7 @@ smugglerPlugin clopts modSummary tcEnv
     -- extra @\r@ at the end of comment lines.
     crnlTonl :: String -> String
     crnlTonl ('\r' : '\n' : rest) = '\n' : crnlTonl rest
+    crnlTonl "\r" = "" -- Haddock comments from source files with dos line endings end with a CR
     crnlTonl (c : rest) = c : crnlTonl rest
-    crnlTonl [] = []
+    crnlTonl "" = ""
 
