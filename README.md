@@ -150,10 +150,10 @@ $ ghcid --command='cabal repl'
 - `Smuggler2` rewrites the existing imports, rather than attempting to prune
   them. (This is a more aggressive approach than `smuggler` which focuses on
   removing redundant imports.) It has advantages and disadvantages. The
-  advantage is that a minimal set of imports is generated in a reproducable
+  advantage is that a minimal set of imports is generated in a reproducible
   format. So you can just import a library without specifying any specific
   imports and `Smuggler2` will add an explict list of things that are used from
-  it. This can be a useful check and better document your modules. The
+  it. This can be a useful check and better documents your modules. The
   disdvantage is that imports may be reordered, comments and blank lines
   dropped, external imports mixed with external, etc.
 
@@ -175,7 +175,7 @@ $ ghcid --command='cabal repl'
   several generations of `ghc` and `base` for example. Nevetheless, `Smuggler2`
   will generate a new CPP preprocessed output file with a `-cpp` suffix.
   [retrie](https://github.com/facebookincubator/retrie/blob/master/Retrie/CPP.hs)
-  solves this problem generating all possible versions of the module
+  solves this problem by generating all possible versions of the module
   (exponential in the number of `#if` directives), operating on each version
   individually, and splicing results back into the original file. A tour de
   force!
@@ -224,7 +224,8 @@ interdependencies and be tripped over by only
   [base library changelog](https://hackage.haskell.org/package/base/changelog)
   provides some details of what was made available when.
 
-- The plugin does not seem to run reliably on Windows. This is probably more of
+- The plugin does not run reliably on Windows with versions of `ghc` prior to
+  8.10.3. This is probably more of
   an issue with the way that the tests are run, than `Smuggler2` itself.
 
 - Currently `cabal` does not have a particular way of specifying plugins. (See,
@@ -315,7 +316,7 @@ source code. The documentation for the library is fairly spartan, and the
 library is not widely used, at least in publicly available code, so the use here
 can, no doubt, be optimised.
 
-The library is needed because the annotated AST that GHC generates does not have
+The library is needed because the annotated AST that GHC alone generates does not have
 enough information to reconstitute the original source. Some parts of the
 renamed syntax tree (for example, imports) are not found in the typechecked one.
 `ghc-exactprint` provides parsers that preserve this information, which is
@@ -329,12 +330,13 @@ changes.
 
 > These functions are
 > [said to be under heavy development](https://hackage.haskell.org/package/ghc-exactprint-0.6.3/docs/Language-Haskell-GHC-ExactPrint-Transform.html).
-> It is not entirely obvious how they are intended to be used or composed. The
+> The
 > approach provided by [`retrie`](https://hackage.haskell.org/package/retrie)
 > wraps an AST and `Anns` into a single type that seems to make AST
 > transformations easier to compose and reduces the risk of the `Anns` and AST
 > getting out of sync as it is being transformed, something with which the type
-> system doesn't help you since the `Anns` are stored as a `Map`.
+> system doesn't help you since the `Anns` are stored as a `Map`. (That approach
+> is not used by `smuggler2`.)
 
 ### Imports
 
@@ -342,7 +344,9 @@ changes.
 
 - parses the original file
 - dumps the minimal exports that GHC generates and parses them back in (to pick
-  up the annotations needed for printing)
+  up the annotations needed for printing). The ghc version of
+  `getMinimalImports` does not handle pattern and type imports correctly.
+  `smuggler2` uses a fixed version of that function.
 - drops implicit imports (such as Prelude) and, optionally, imports that are for
   instances only
 - replaces the original imports with minimal ones
@@ -360,7 +364,8 @@ Exports are simpler to deal with as GHC's `exports_from_avail` does the work.
 ## Other projects
 
 - Smuggler2 was is a rewrite of
-  [`smuggler`](https://hackage.haskell.org/package/smuggler)
+  [`smuggler`](https://hackage.haskell.org/package/smuggler) that rewrites
+  rather than just pruning existing imports
 - `retrie` a [code modding tool](https://hackage.haskell.org/package/retrie)
   that works with GHC 8.10.1
 - `refact-global-hse` an ambitious

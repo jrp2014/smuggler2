@@ -17,9 +17,6 @@ import Data.Version (showVersion)
 import DynFlags
   ( DynFlags (dumpDir),
     HasDynFlags (getDynFlags),
-#if defined(mingw32_HOST_OS) || defined(__MINGW32__) || defined (WINDOWS)
-    setUnsafeGlobalDynFlags,
-#endif
     xopt,
     xopt_set,
   )
@@ -102,11 +99,6 @@ smugglerPlugin clopts modSummary tcEnv
     return tcEnv
   | otherwise = do
     dflags <- getDynFlags
-#if defined(mingw32_HOST_OS) || defined(__MINGW32__) || defined (WINDOWS)
-    -- Mysterious incantation that seems to prevent some
-    -- @v_unsafeGlobalDynFlags: settings not initialised@ panics under Windows
-    liftIO $ setUnsafeGlobalDynFlags dflags
-#endif
     liftIO $ compilationProgressMsg dflags ("smuggler2 " ++ showVersion version)
 
     -- Get imports usage
@@ -169,7 +161,6 @@ smugglerPlugin clopts modSummary tcEnv
           <$ withTiming
 #if MIN_VERSION_GLASGOW_HASKELL(8,10,1,0)
             dflags
-
 #else
             getDynFlags
 #endif
