@@ -1,7 +1,7 @@
 # For convenience
 #
 
-.PHONY: build install test clean accept doc hlint ghcid upload upload-docs weed
+.PHONY: build install test clean accept doc hlint ghcid upload upload-docs weed stan
 
 all: build test doc
 
@@ -48,6 +48,9 @@ upload-docs:
 
 hlint:
 	hlint src test/Test.hs
+
+stan:
+	stan
 
 ghcid:
 	ghcid
