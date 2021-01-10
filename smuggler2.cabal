@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               smuggler2
-version:            0.3.6.1
+version:            0.3.6.2
 synopsis:
   GHC Source Plugin that helps to minimise imports and generate explicit exports
 
@@ -105,9 +105,9 @@ library
   other-modules:   Paths_smuggler2
   autogen-modules: Paths_smuggler2
   build-depends:
-    , containers      ^>=0.6.2
-    , directory       ^>=1.3.6
-    , filepath        ^>=1.4.2
+    , containers      ^>=0.6
+    , directory       ^>=1.3
+    , filepath        ^>=1.4
     , ghc             >=8.6.5 && <8.11
     , ghc-boot        >=8.6.5 && <8.11
     , ghc-exactprint  ^>=0.6.3

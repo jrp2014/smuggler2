@@ -35,13 +35,13 @@
 
 - [X] Add options for handling `NoImplictPrelude` and keeping it pristine?
 
-- [ ] Add option to import using widcards only
+- [ ] Add option to import using wildcards only
 
 - [ ] Rexporting of patterns?
 
 - [X] Initial language pragmas are not retained if there is no `module ...
   where`
 
-- [ ] `ghc-exactprint` adds `\r` into comments at eol. Woraround?
+- [X] `ghc-exactprint` adds `\r` into comments at eol. Woraround?
 
 - [ ] check `getMinimalImports` for corner cases
