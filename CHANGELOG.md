@@ -5,6 +5,10 @@ Notable changes to `Smuggler2`
 `smuggler2` uses [PVP Versioning][1].
 The change log is available [on GitHub][2].
 
+## [UNRELEASED]: -- tbd
+
+- tidy up github workflow
+
 ## [0.3.6.2]: -- 10 January 2021
 
 - print out timings / memory usage, when `-v2` or greater is set
