@@ -13,12 +13,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: [latest, '8.8.3']
-        cabal: ['3.2']
+        ghc: latest
+        cabal: latest
         os: [ubuntu-latest, macOS-latest, windows-latest]
         experimental: [false]
         include:
-          - ghc: '8.6.5'
+          - ghc: ['8.6.5', '8.8.3']
             cabal: latest
             os: ubuntu-latest
             experimental: true
