@@ -25,11 +25,7 @@ jobs:
           - ghc: '8.8.3'
             cabal: latest
             os: ubuntu-latest
-            experimental: true
-          - ghc: '8.10.3'
-            cabal: latest
-            os: windows-latest
-            experimental: true
+            experimental: false
 
     steps:
       - uses: actions/checkout@v2
@@ -44,14 +40,14 @@ jobs:
 
       - name: Versions
         run: |
-          cabal --version
           ghc --version
+          cabal --version
+          cabal update
           cabal gen-bounds
 
       - name: Configure
         run: |
           cabal clean
-          cabal update
           cabal configure --enable-tests --disable-benchmarks --test-show-details=direct --write-ghc-environment-files=always
 
       - name: Freeze
