@@ -13,8 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: latest
-        cabal: latest
+        ghc: [latest]
+        cabal: [latest]
         os: [ubuntu-latest, macOS-latest, windows-latest]
         experimental: [false]
         include:
