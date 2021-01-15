@@ -1,0 +1,14 @@
+repo:
+  - ./*
+
+plugin:
+  - src/**/*
+
+test:
+  - test/*
+
+tests:
+  - test/tests/**/*
+
+workflow:
+  - .github/**/*

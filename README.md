@@ -30,7 +30,7 @@ names are being used.
 
 Install `smuggler2` using `cabal install --lib smuggler2`.
 
-### Adding Smuggler2 to your dependencies
+### Adding Smuggler2 to your Cabal dependencies
 
 Add `smuggler2` to the dependencies of your project and to your compiler flags.
 For example, you could include in your project `cabal` file something like
@@ -87,7 +87,8 @@ or just
 $ cabal build -w ghc-smuggler2
 ```
 
-You can just run `ghcid` as usual:
+You can just run `ghcid` as usual if you have set up your cabal file to run the
+plugin.
 
 ```bash
 $ ghcid --command='cabal repl'
@@ -96,7 +97,7 @@ $ ghcid --command='cabal repl'
 ## Options
 
 `Smuggler2` has several (case-insensitive) options, which can be set by adding
-`-fplugin-opt=Smuggler2.Plugin:` flags to your `ghc-options`
+`-fplugin-opt=Smuggler2.Plugin:` flags:
 
 - `NoImportProcessing` - do no import processing
 - `PreserveInstanceImports` - remove unused imports, but preserve a library
