@@ -63,3 +63,9 @@ weed:
 whitespace:
 	 git diff --check
 	 git rebase --whitespace=fix
+
+tag: *.md Makefile */*.hs */*/*.hs
+	hasktags -e -o TAGS $^
+	hasktags -c -o ctags $^
+
+

@@ -50,7 +50,8 @@ tags
 *#
 .dir-locals.el
 TAGS
-
+ctags
+        
 # other
 .DS_Store
 
