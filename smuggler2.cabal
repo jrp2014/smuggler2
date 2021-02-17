@@ -46,7 +46,7 @@ extra-source-files:
 -- ghc 8.6.5 produces different results from later versions because it
 -- uses a different version of base
 tested-with:
-  GHC ==8.6.5 || ==8.8.3 || ==8.10.1 || ==8.10.2 || ==8.10.3
+  GHC ==8.6.5 || ==8.8.3 || ==8.10.1 || ==8.10.2 || ==8.10.3 || ==8.10.4
 
 flag debug
   description: Enable debugging support

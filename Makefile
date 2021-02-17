@@ -29,6 +29,7 @@ clean:
 	cabal v1-clean
 	test/clean.sh
 	rm -rf .hie
+	rm TAGS ctags
 
 accept:
 	cabal run smuggler2-test -- --accept --delete-output=onpass
