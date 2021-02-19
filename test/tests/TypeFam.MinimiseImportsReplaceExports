@@ -1,0 +1,46 @@
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
+
+-- http://www.mchaver.com/posts/2017-06-21-type-families.html
+
+module TypeFam (
+  Container(..),
+  result,
+  main ) where
+
+import Data.Text ( Text )
+import Imported.TypeFam ( Concat(cat, type ConcatTy) )
+
+
+result :: ConcatTy Text String
+result =  cat ("Hello" :: Text) (" World!" :: String)
+
+main = print result
+
+class Container c where
+  type Elem c
+  empty  :: c
+  insert :: Elem c -> c -> c
+  member :: Elem c -> c -> Bool
+  toList :: c -> [Elem c]
+
+instance Eq e => Container [e] where
+  type Elem [e]   = e
+  empty           = []
+  insert e l      = (e:l)
+  member e []     = False
+  member e (x:xs)
+    | e == x      = True
+    | otherwise   = member e xs
+  toList l        = l
+
+instance Eq e => Container (Maybe e) where
+  type Elem (Maybe e) = e -- type synonym
+  empty            = Nothing
+  insert e l       = Just e -- destructive, replaces previous element
+  member e Nothing = False
+  member e (Just x) = e == x
+  toList Nothing   = []
+  toList (Just x)  = [x]

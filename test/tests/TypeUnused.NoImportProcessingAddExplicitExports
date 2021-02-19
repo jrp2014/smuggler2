@@ -1,0 +1,6 @@
+module Test.TypeUnused (
+  foo ) where
+
+import Data.Bool (Bool, not)
+
+foo = not

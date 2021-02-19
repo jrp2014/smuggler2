@@ -1,0 +1,20 @@
+module MoreExports where
+
+--Another comment
+--
+
+newtype N a = Int a
+
+data D a = A a  | B | C a
+
+data R = R { a :: Int, b :: Bool }
+
+data H = I | J | K deriving Show
+
+
+foo = (+1)
+
+-- A further  Comment
+
+main :: IO ()
+main = print J
