@@ -8,7 +8,7 @@
 #
 # For more information, see https://github.com/haskell-CI/haskell-ci
 #
-# version: 0.11.20210214
+# version: 0.11.20210222
 #
 version: ~> 1.0
 language: c
@@ -33,6 +33,9 @@ before_cache:
   - rm -rfv $CABALHOME/packages/head.hackage
 jobs:
   include:
+    - compiler: ghc-8.10.4
+      addons: {"apt":{"packages":["ghc-8.10.4","cabal-install-3.4"],"sources":[{"key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286","sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main"}]}}
+      os: linux
     - compiler: ghc-8.10.3
       addons: {"apt":{"packages":["ghc-8.10.3","cabal-install-3.4"],"sources":[{"key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286","sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main"}]}}
       os: linux
@@ -148,5 +151,5 @@ script:
   - rm -f cabal.project.local
   - ${CABAL} v2-build $WITHCOMPILER --disable-tests --disable-benchmarks all
 
-# REGENDATA ("0.11.20210214",["travis","smuggler2.cabal","--no-benchmarks","--allow-failures=<=8.6.5","--output",".travis.yml"])
+# REGENDATA ("0.11.20210222",["travis","smuggler2.cabal","--no-benchmarks","--allow-failures=<=8.6.5","--output",".travis.yml"])
 # EOF
