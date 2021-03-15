@@ -1,6 +1,0 @@
-module Test.BoolPartlyUsedFirst (
-  foo ) where
-
-import Data.Bool (bool, not)
-
-foo = bool

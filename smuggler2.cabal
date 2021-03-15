@@ -46,7 +46,12 @@ extra-source-files:
 -- ghc 8.6.5 produces different results from later versions because it
 -- uses a different version of base
 tested-with:
-  GHC ==8.6.5 || ==8.8.3 || ==8.10.1 || ==8.10.2 || ==8.10.3 || ==8.10.4
+  GHC ==8.6.5
+   || ==8.8.3
+   || ==8.10.1
+   || ==8.10.2
+   || ==8.10.3
+   || ==8.10.4
 
 flag debug
   description: Enable debugging support
@@ -72,12 +77,15 @@ common common-options
     -Wincomplete-record-updates -Wcompat -Widentities
     -Wredundant-constraints -fhide-source-paths -fobject-code
     -Wnoncanonical-monad-instances -Wmissing-export-lists
-    -Wpartial-fields
+    -Wpartial-fields -Wmissing-export-lists
 
-  if impl(ghc >=8.10.0)
-    ghc-options:
-      -Wunused-packages -fwrite-ide-info -hiedir=.hie
---      -Wmissing-deriving-strategies
+  if impl(ghc >=8.8)
+    ghc-options: -Wmissing-deriving-strategies -fwrite-ide-info -hiedir=.hie
+
+  if impl(ghc >=8.10)
+    ghc-options: -Wunused-packages
+
+  --      -Wmissing-deriving-strategies
 
   if flag(debug)
     ghc-options: -ddump-minimal-imports
@@ -114,7 +122,7 @@ library
     , filepath        ^>=1.4
     , ghc             >=8.6.5 && <8.11
     , ghc-boot        >=8.6.5 && <8.11
-    , ghc-exactprint  ^>=0.6.3
+    , ghc-exactprint  ^>=0.6.4
     , split           ^>=0.2.3
     , syb             ^>=0.7.1
 

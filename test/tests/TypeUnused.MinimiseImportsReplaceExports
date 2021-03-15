@@ -1,4 +1,0 @@
-module Test.TypeUnused (
-  foo ) where
-
-foo = not

@@ -8,7 +8,7 @@
 #
 # For more information, see https://github.com/haskell-CI/haskell-ci
 #
-# version: 0.11.20210222
+# version: 0.12.1
 #
 version: ~> 1.0
 language: c
@@ -151,5 +151,5 @@ script:
   - rm -f cabal.project.local
   - ${CABAL} v2-build $WITHCOMPILER --disable-tests --disable-benchmarks all
 
-# REGENDATA ("0.11.20210222",["travis","smuggler2.cabal","--no-benchmarks","--allow-failures=<=8.6.5","--output",".travis.yml"])
+# REGENDATA ("0.12.1",["travis","smuggler2.cabal","--no-benchmarks","--allow-failures=<=8.6.5","--output",".travis.yml"])
 # EOF
